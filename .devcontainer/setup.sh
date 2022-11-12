@@ -6,8 +6,6 @@ apt-get install -y \
   gnupg2 \
   jq \
   sudo \
-  zsh \
-  vim \
   build-essential \
   openssl
 
