@@ -1,0 +1,4 @@
+{
+  "name": "Codespaces Rust",
+  "dockerFile": "Dockerfile"
+}
