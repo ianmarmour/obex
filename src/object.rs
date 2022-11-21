@@ -456,6 +456,18 @@ impl TryFrom<u8> for HeaderID {
 }
 
 impl From<HeaderID> for u8 {
+  /// Convert a `HeaderID` to a `u8`:
+  ///
+  /// # Examples
+  ///
+  /// Count
+  /// ```
+  /// # use obex::object::HeaderID;
+  ///
+  /// let data: u8 = HeaderID::Count.into();
+  ///
+  /// assert_eq!(0xC0, data);
+  /// ```
   fn from(id: HeaderID) -> u8 {
     match id {
       HeaderID::Count => 0xC0,
