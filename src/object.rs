@@ -11,38 +11,57 @@ impl Header {
   ///
   /// # Examples
   ///
+  /// Count
   /// ```
   /// # use obex::object::Header;
   /// # use obex::object::HeaderID;
   /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded 4 byte integer byte sequence
   /// let data: [u8; 5] = [0xC0, 0, 0, 0, 0];
-  /// let (dat, header) = Header::parse(&data).unwrap();
+  /// let (data, header) = Header::parse(&data).unwrap();
   ///
   /// assert_eq!(HeaderID::Count, header.id);
   /// assert_eq!(HeaderValue::Count(0), header.value);
   /// ```
   ///
+  /// Name
   /// ```
   /// # use obex::object::Header;
   /// # use obex::object::HeaderID;
   /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded UTF-8 null terminated byte sequence
   /// let data: [u8; 8] = [0x01, 5, 0, 116, 101, 120, 116, 0];
-  /// let (dat, header) = Header::parse(&data).unwrap();
+  /// let (data, header) = Header::parse(&data).unwrap();
   ///
   /// assert_eq!(HeaderID::Name, header.id);
   /// assert_eq!(HeaderValue::Name("text\0".to_string()), header.value);
   /// ```
   ///
+  /// Type
   /// ```
   /// # use obex::object::Header;
   /// # use obex::object::HeaderID;
   /// # use obex::object::HeaderValue;
   /// # use ascii::{AsAsciiStr, AsciiChar};
+  /// // Little Endian encoded ASCII null terminated byte sequence
   /// let data: [u8; 7] = [0x42, 4, 0, 112, 100, 102, 0];
-  /// let (dat, header) = Header::parse(&data).unwrap();
+  /// let (data, header) = Header::parse(&data).unwrap();
   ///
   /// assert_eq!(HeaderID::Type, header.id);
   /// assert_eq!(HeaderValue::Type("pdf\0".as_ascii_str().unwrap().to_ascii_string()), header.value);
+  /// ```
+  ///
+  /// Length
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded 4 byte integer byte sequence
+  /// let data: [u8; 5] = [0xC3, 1, 0, 0, 0];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::Length, header.id);
+  /// assert_eq!(HeaderValue::Length(1), header.value);
   /// ```
   ///
   pub fn parse(i: &[u8]) -> IResult<&[u8], Header> {
