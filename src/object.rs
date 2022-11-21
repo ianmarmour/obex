@@ -64,6 +64,33 @@ impl Header {
   /// assert_eq!(HeaderValue::Length(1), header.value);
   /// ```
   ///
+  /// Time
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// # use ascii::{AsAsciiStr, AsciiChar};
+  /// // Little Endian encoded encoded ASCII byte sequence ISO 8601 Formatted
+  /// let data: [u8; 19] = [0x44, 16, 0, 49, 57, 57, 52, 48, 50, 48, 54, 84, 48, 49, 48, 49, 48, 49, 90];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::Time, header.id);
+  /// assert_eq!(HeaderValue::Time("19940206T010101Z".as_ascii_str().unwrap().to_ascii_string()), header.value)
+  /// ```
+  ///
+  /// Description
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded UTF-8 null terminated byte sequence
+  /// let data: [u8; 8] = [0x05, 5, 0, 116, 101, 120, 116, 0];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::Description, header.id);
+  /// assert_eq!(HeaderValue::Description("text\0".to_string()), header.value);
+  /// ```
+  ///
   pub fn parse(i: &[u8]) -> IResult<&[u8], Header> {
     let (i, id) = HeaderID::parse(i)?;
 
@@ -116,7 +143,7 @@ impl Header {
 
         let header: Header = Header {
           id: id,
-          value: HeaderValue::Type(AsciiString::from_ascii(value).unwrap())
+          value: HeaderValue::Time(AsciiString::from_ascii(value).unwrap())
         };
 
         Ok((i, header))
@@ -127,7 +154,7 @@ impl Header {
 
         let header: Header = Header {
           id: id,
-          value: HeaderValue::Name(String::from_utf8(value).unwrap())
+          value: HeaderValue::Description(String::from_utf8(value).unwrap())
         };
 
         Ok((i, header))
@@ -323,6 +350,7 @@ impl Header {
       },
     }
   }
+
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -427,6 +455,38 @@ impl TryFrom<u8> for HeaderID {
     }
 }
 
+impl From<HeaderID> for u8 {
+  fn from(id: HeaderID) -> u8 {
+    match id {
+      HeaderID::Count => 0xC0,
+      HeaderID::Name => 0x01,
+      HeaderID::Type => 0x42,
+      HeaderID::Length => 0xC3,
+      HeaderID::Time => 0x44,
+      HeaderID::Description => 0x05,
+      HeaderID::Target => 0x46,
+      HeaderID::HTTP => 0x47,
+      HeaderID::Body => 0x48,
+      HeaderID::EndOfBody => 0x49,
+      HeaderID::Who => 0x4A,
+      HeaderID::ConnectionID => 0xCB,
+      HeaderID::ApplicationParameters => 0x4C,
+      HeaderID::AuthenticateChallenge => 0x4D,
+      HeaderID::AuthenticateResponse => 0x4E,
+      HeaderID::CreatorID => 0xCF,
+      HeaderID::WANUUID => 0x50,
+      HeaderID::ObjectClass => 0x51,
+      HeaderID::SessionParameters => 0x52,
+      HeaderID::SessionSequenceNumber => 0x93,
+      HeaderID::ActionID => 0x94,
+      HeaderID::DestName => 0x15,
+      HeaderID::Permissions => 0xD6,
+      HeaderID::SingleResponseMode => 0x97,
+      HeaderID::SingleResponseModeParameters => 0x98,
+    }
+  }
+}
+
 impl HeaderID {
   pub fn parse(i: &[u8]) -> IResult<&[u8], HeaderID> {
     let (i, id) = le_u8(i)?;
@@ -440,3 +500,6 @@ impl HeaderID {
 
 #[derive(Debug, Clone)]
 pub struct HeaderIDError;
+
+#[derive(Debug, Clone)]
+pub struct HeaderError;
