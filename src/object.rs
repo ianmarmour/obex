@@ -14,10 +14,35 @@ impl Header {
   /// ```
   /// # use obex::object::Header;
   /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
   /// let data: [u8; 5] = [0xC0, 0, 0, 0, 0];
   /// let (dat, header) = Header::parse(&data).unwrap();
   ///
   /// assert_eq!(HeaderID::Count, header.id);
+  /// assert_eq!(HeaderValue::Count(0), header.value);
+  /// ```
+  ///
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// let data: [u8; 8] = [0x01, 5, 0, 116, 101, 120, 116, 0];
+  /// let (dat, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::Name, header.id);
+  /// assert_eq!(HeaderValue::Name("text\0".to_string()), header.value);
+  /// ```
+  ///
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// # use ascii::{AsAsciiStr, AsciiChar};
+  /// let data: [u8; 7] = [0x42, 4, 0, 112, 100, 102, 0];
+  /// let (dat, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::Type, header.id);
+  /// assert_eq!(HeaderValue::Type("pdf\0".as_ascii_str().unwrap().to_ascii_string()), header.value);
   /// ```
   ///
   pub fn parse(i: &[u8]) -> IResult<&[u8], Header> {
@@ -310,6 +335,7 @@ pub enum HeaderID {
   SingleResponseModeParameters = 0x98,
 }
 
+#[derive(Debug, PartialEq, Clone)]
 pub enum HeaderValue {
   Count(u32),
   Name(String), // TODO: Is null terminated but rust does not use null terminated UTF-8
@@ -353,7 +379,31 @@ impl TryFrom<u8> for HeaderID {
     fn try_from(original: u8) -> Result<Self, Self::Error> {
         match original {
           0xC0 => Ok(HeaderID::Count),
-            _ => Err(HeaderIDError)
+          0x01 => Ok(HeaderID::Name),
+          0x42 => Ok(HeaderID::Type),
+          0xC3 => Ok(HeaderID::Length),
+          0x44 => Ok(HeaderID::Time),
+          0x05 => Ok(HeaderID::Description),
+          0x46 => Ok(HeaderID::Target),
+          0x47 => Ok(HeaderID::HTTP),
+          0x48 => Ok(HeaderID::Body),
+          0x49 => Ok(HeaderID::EndOfBody),
+          0x4A => Ok(HeaderID::Who),
+          0xCB => Ok(HeaderID::ConnectionID),
+          0x4C => Ok(HeaderID::ApplicationParameters),
+          0x4D => Ok(HeaderID::AuthenticateChallenge),
+          0x4E => Ok(HeaderID::AuthenticateResponse),
+          0xCF => Ok(HeaderID::CreatorID),
+          0x50 => Ok(HeaderID::WANUUID),
+          0x51 => Ok(HeaderID::ObjectClass),
+          0x52 => Ok(HeaderID::SessionParameters),
+          0x93 => Ok(HeaderID::SessionSequenceNumber),
+          0x94 => Ok(HeaderID::ActionID),
+          0x15 => Ok(HeaderID::DestName),
+          0xD6 => Ok(HeaderID::Permissions),
+          0x97 => Ok(HeaderID::SingleResponseMode),
+          0x98 => Ok(HeaderID::SingleResponseModeParameters),
+          _ => Err(HeaderIDError)
         }
     }
 }
