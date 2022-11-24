@@ -91,6 +91,212 @@ impl Header {
   /// assert_eq!(HeaderValue::Description("text\0".to_string()), header.value);
   /// ```
   ///
+  /// Target
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded length prefixed byte array
+  /// let data: [u8; 8] = [0x46, 5, 0, 1, 2, 3, 4, 5];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// let expected = Vec::from([1, 2, 3, 4, 5]);
+  ///
+  /// assert_eq!(HeaderID::Target, header.id);
+  /// assert_eq!(HeaderValue::Target(expected), header.value);
+  /// ```
+  ///
+  /// HTTP
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded length prefixed byte array
+  /// let data: [u8; 8] = [0x47, 5, 0, 1, 2, 3, 4, 5];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// let expected = Vec::from([1, 2, 3, 4, 5]);
+  ///
+  /// assert_eq!(HeaderID::HTTP, header.id);
+  /// assert_eq!(HeaderValue::HTTP(expected), header.value);
+  /// ```
+  ///
+  /// Body
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded length prefixed byte array
+  /// let data: [u8; 8] = [0x48, 5, 0, 1, 2, 3, 4, 5];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// let expected = Vec::from([1, 2, 3, 4, 5]);
+  ///
+  /// assert_eq!(HeaderID::Body, header.id);
+  /// assert_eq!(HeaderValue::Body(expected), header.value);
+  /// ```
+  ///
+  /// EndOfBody
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded length prefixed byte array
+  /// let data: [u8; 8] = [0x49, 5, 0, 1, 2, 3, 4, 5];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// let expected = Some(Vec::from([1, 2, 3, 4, 5]));
+  ///
+  /// assert_eq!(HeaderID::EndOfBody, header.id);
+  /// assert_eq!(HeaderValue::EndOfBody(expected), header.value);
+  /// ```
+  ///
+  /// Who
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded length prefixed byte array
+  /// let data: [u8; 8] = [0x4A, 5, 0, 1, 2, 3, 4, 5];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// let expected = Vec::from([1, 2, 3, 4, 5]);
+  ///
+  /// assert_eq!(HeaderID::Who, header.id);
+  /// assert_eq!(HeaderValue::Who(expected), header.value);
+  /// ```
+  ///
+  /// ConnectionID
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded 4 byte integer byte sequence
+  /// let data: [u8; 5] = [0xCB, 15, 0, 0, 0];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::ConnectionID, header.id);
+  /// assert_eq!(HeaderValue::ConnectionID([15, 0, 0, 0]), header.value);
+  /// ```
+  ///
+  /// CreatorID
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded 4 byte integer byte sequence
+  /// let data: [u8; 5] = [0xCF, 15, 0, 0, 0];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::CreatorID, header.id);
+  /// assert_eq!(HeaderValue::CreatorID(15), header.value);
+  /// ```
+  ///
+  /// WANUUID
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded 16 byte UUID
+  /// let data: [u8; 17] = [0x50, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 ,16];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::WANUUID, header.id);
+  /// assert_eq!(HeaderValue::WANUUID([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 ,16]), header.value);
+  /// ```
+  ///
+  /// ObjectClass
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded 16 byte UUID
+  /// let data: [u8; 8] = [0x51, 5, 0, 1, 2, 3, 4, 5];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// let expected = Vec::from([1, 2, 3, 4, 5]);
+  ///
+  /// assert_eq!(HeaderID::ObjectClass, header.id);
+  /// assert_eq!(HeaderValue::ObjectClass(expected), header.value);
+  /// ```
+  ///
+  /// SessionSequenceNumber
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded 16 byte UUID
+  /// let data: [u8; 2] = [0x93, 11];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::SessionSequenceNumber, header.id);
+  /// assert_eq!(HeaderValue::SessionSequenceNumber(11), header.value);
+  /// ```
+  ///
+  /// ActionID
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded 16 byte UUID
+  /// let data: [u8; 2] = [0x94, 11];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::ActionID, header.id);
+  /// assert_eq!(HeaderValue::ActionID(11), header.value);
+  /// ```
+  ///
+  /// DestName
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded UTF-8 null terminated byte sequence
+  /// let data: [u8; 8] = [0x15, 5, 0, 116, 101, 120, 116, 0];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::DestName, header.id);
+  /// assert_eq!(HeaderValue::DestName("text\0".to_string()), header.value);
+  /// ```
+  ///
+  /// Permissions
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded
+  /// let data: [u8; 5] = [0xD6, 5, 0, 0, 0];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::Permissions, header.id);
+  /// assert_eq!(HeaderValue::Permissions(5), header.value);
+  /// ```
+  ///
+  /// SingleResponseMode
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded u8 byte
+  /// let data: [u8; 2] = [0x97, 1];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::SingleResponseMode, header.id);
+  /// assert_eq!(HeaderValue::SingleResponseMode(1), header.value);
+  /// ```
+  ///
+  /// SingleResponseModeParameters
+  /// ```
+  /// # use obex::object::Header;
+  /// # use obex::object::HeaderID;
+  /// # use obex::object::HeaderValue;
+  /// // Little Endian encoded u8 byte
+  /// let data: [u8; 2] = [0x98, 1];
+  /// let (data, header) = Header::parse(&data).unwrap();
+  ///
+  /// assert_eq!(HeaderID::SingleResponseModeParameters, header.id);
+  /// assert_eq!(HeaderValue::SingleResponseModeParameters(1), header.value);
+  /// ```
   pub fn parse(i: &[u8]) -> IResult<&[u8], Header> {
     let (i, id) = HeaderID::parse(i)?;
 
@@ -396,6 +602,37 @@ pub enum HeaderValue {
 }
 
 impl From<HeaderValue> for Vec<u8> {
+  /// Attempts to convert a `HeaderValue` to `Vec<u8>`
+  ///
+  /// # Examples
+  ///
+  /// Count
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // Little Endian encoded 32 bit representation of 2.
+  /// let mut expected = Vec::from([2,0,0,0]);
+  ///
+  /// let value =  HeaderValue::Count(2);
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// Name
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 Byte representation of the word "test"
+  /// let mut expected = Vec::from([0x74,0x65,0x73,0x74]);
+  ///
+  /// let value =  HeaderValue::Name("test".to_string());
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
   fn from(value: HeaderValue) -> Vec<u8> {
     match value {
       HeaderValue::Count(val) => {
