@@ -1217,3 +1217,9 @@ pub struct HeaderIDError;
 
 #[derive(Debug, Clone)]
 pub struct HeaderError;
+
+pub struct TagLengthValue {
+  pub tag: u8,
+  pub length: u8,
+  pub value: Vec<u8>, // TODO: Should be implemented as a bounded array of a fixed maximum size of 255 bytes and minimum size of 0 bytes
+}
