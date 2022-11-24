@@ -455,11 +455,35 @@ impl Header {
       },
       // TODO: Implement AuthenticateChallenge
       HeaderID::AuthenticateChallenge => {
-        panic!("AuthenticateChallenge Unimplemented");
+        let (i, length) = le_u16(i)?;
+        let (i, tlvs) = take(length)(i)?;
+
+        // We want the proceeding take parser to consume all of the real data from
+        // our input, the input response of this TLV parser isn't needed for headers.
+        let (_, value) = many0(TagLengthValue::parse)(tlvs)?;
+
+        let header: Header = Header {
+          id: id,
+          value: HeaderValue::AuthenticateChallenge(value)
+        };
+
+        Ok((i, header))
       },
       // TODO: Implement AuthenticateResponse
       HeaderID::AuthenticateResponse => {
-        panic!("AuthenticateResponse Unimplemented");
+        let (i, length) = le_u16(i)?;
+        let (i, tlvs) = take(length)(i)?;
+
+        // We want the proceeding take parser to consume all of the real data from
+        // our input, the input response of this TLV parser isn't needed for headers.
+        let (_, value) = many0(TagLengthValue::parse)(tlvs)?;
+
+        let header: Header = Header {
+          id: id,
+          value: HeaderValue::AuthenticateResponse(value)
+        };
+
+        Ok((i, header))
       },
       HeaderID::CreatorID => {
         let (i, value) = le_u32(i)?;
@@ -502,7 +526,19 @@ impl Header {
       },
       // TODO: Implement SessionParameters
       HeaderID::SessionParameters => {
-        panic!("SessionParameters Unimplemented");
+        let (i, length) = le_u16(i)?;
+        let (i, tlvs) = take(length)(i)?;
+
+        // We want the proceeding take parser to consume all of the real data from
+        // our input, the input response of this TLV parser isn't needed for headers.
+        let (_, value) = many0(TagLengthValue::parse)(tlvs)?;
+
+        let header: Header = Header {
+          id: id,
+          value: HeaderValue::SessionParameters(value)
+        };
+
+        Ok((i, header))
       },
       HeaderID::SessionSequenceNumber => {
         let (i, value) = le_u8(i)?;
@@ -597,13 +633,13 @@ pub enum HeaderValue {
   EndOfBody(Option<Vec<u8>>), // TODO: This may be wrong as it can be a null or empty header or contain value but no clue?
   Who(Vec<u8>),
   ConnectionID([u8; 4]),
-  ApplicationParameters(Vec<TagLengthValue>), // TODO: Implement Obex TLV Parsing
-  AuthenticateChallenge(), // TODO: Implement Obex TLV Parsing
-  AuthenticateResponse(), // TODO: Implement Obex TLV Parsing
+  ApplicationParameters(Vec<TagLengthValue>),
+  AuthenticateChallenge(Vec<TagLengthValue>),
+  AuthenticateResponse(Vec<TagLengthValue>),
   CreatorID(u32),
   WANUUID([u8; 16]),
   ObjectClass(Vec<u8>), // TODO: Unsure of if sub types need to be implemented here.
-  SessionParameters(), // TODO: Implement Obex TLV Parsing
+  SessionParameters(Vec<TagLengthValue>), // TODO: Implement SubTypes for SessionParameters???
   SessionSequenceNumber(u8),
   ActionID(u8),
   DestName(String), // TODO: Is null terminated but rust does not null terminate UTF-8
@@ -1020,10 +1056,10 @@ impl From<HeaderValue> for Vec<u8> {
 
         return bytes;
       },
-      HeaderValue::AuthenticateChallenge() => {
+      HeaderValue::AuthenticateChallenge(_val) => {
         todo!("Implement authenticate challenge");
       },
-      HeaderValue::AuthenticateResponse() => {
+      HeaderValue::AuthenticateResponse(_val) => {
         todo!("Implement authenticate response");
       },
       HeaderValue::CreatorID(val) => {
@@ -1048,7 +1084,7 @@ impl From<HeaderValue> for Vec<u8> {
 
         return bytes;
       },
-      HeaderValue::SessionParameters() => {
+      HeaderValue::SessionParameters(_val) => {
         todo!("Implement Session Parameters");
       },
       HeaderValue::SessionSequenceNumber(val) => {
