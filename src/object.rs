@@ -353,33 +353,17 @@ impl Header {
 
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum HeaderID {
-  Count = 0xC0,
-  Name = 0x01,
-  Type = 0x42,
-  Length = 0xC3,
-  Time = 0x44,
-  Description = 0x05,
-  Target = 0x46,
-  HTTP = 0x47,
-  Body = 0x48,
-  EndOfBody = 0x49,
-  Who = 0x4A,
-  ConnectionID = 0xCB,
-  ApplicationParameters = 0x4C,
-  AuthenticateChallenge = 0x4D,
-  AuthenticateResponse = 0x4E,
-  CreatorID = 0xCF,
-  WANUUID = 0x50,
-  ObjectClass = 0x51,
-  SessionParameters = 0x52,
-  SessionSequenceNumber = 0x93,
-  ActionID = 0x94,
-  DestName = 0x15,
-  Permissions = 0xD6,
-  SingleResponseMode = 0x97,
-  SingleResponseModeParameters = 0x98,
+impl From<Header> for Vec<u8> {
+  fn from(header: Header) -> Vec<u8> {
+    let id: u8 = header.id.into();
+    let value: Vec<u8> = header.value.into();
+
+    let mut bytes: Vec<u8> = Vec::new();
+    bytes.push(id);
+    bytes.extend(value);
+
+    return bytes;
+  }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -411,48 +395,221 @@ pub enum HeaderValue {
   SingleResponseModeParameters(u8)
 }
 
-impl TryFrom<u8> for HeaderID {
-    type Error = HeaderIDError;
+impl From<HeaderValue> for Vec<u8> {
+  fn from(value: HeaderValue) -> Vec<u8> {
+    match value {
+      HeaderValue::Count(val) => {
+        // Convert u32 to le encoded byte array
+        let value: [u8; 4] = val.to_le_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
 
-    /// Atttempts to convert a `u8` to a valid `HeaderID`
-    ///
-    /// # Examples
-    /// ```
-    /// # use obex::object::HeaderID;
-    /// let header_id: HeaderID = HeaderID::try_from(0xC0).unwrap();
-    ///
-    /// assert_eq!(HeaderID::Count, header_id);
-    /// ```
-    fn try_from(original: u8) -> Result<Self, Self::Error> {
-        match original {
-          0xC0 => Ok(HeaderID::Count),
-          0x01 => Ok(HeaderID::Name),
-          0x42 => Ok(HeaderID::Type),
-          0xC3 => Ok(HeaderID::Length),
-          0x44 => Ok(HeaderID::Time),
-          0x05 => Ok(HeaderID::Description),
-          0x46 => Ok(HeaderID::Target),
-          0x47 => Ok(HeaderID::HTTP),
-          0x48 => Ok(HeaderID::Body),
-          0x49 => Ok(HeaderID::EndOfBody),
-          0x4A => Ok(HeaderID::Who),
-          0xCB => Ok(HeaderID::ConnectionID),
-          0x4C => Ok(HeaderID::ApplicationParameters),
-          0x4D => Ok(HeaderID::AuthenticateChallenge),
-          0x4E => Ok(HeaderID::AuthenticateResponse),
-          0xCF => Ok(HeaderID::CreatorID),
-          0x50 => Ok(HeaderID::WANUUID),
-          0x51 => Ok(HeaderID::ObjectClass),
-          0x52 => Ok(HeaderID::SessionParameters),
-          0x93 => Ok(HeaderID::SessionSequenceNumber),
-          0x94 => Ok(HeaderID::ActionID),
-          0x15 => Ok(HeaderID::DestName),
-          0xD6 => Ok(HeaderID::Permissions),
-          0x97 => Ok(HeaderID::SingleResponseMode),
-          0x98 => Ok(HeaderID::SingleResponseModeParameters),
-          _ => Err(HeaderIDError)
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::Name(val) => {
+        let value: &[u8] = val.as_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::Type(val) => {
+        let value = val.as_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::Length(val) => {
+        let value = val.to_le_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::Time(val) => {
+        let value = val.as_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::Description(val) => {
+        let value = val.as_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::Target(val) => {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(val);
+
+        return bytes;
+      },
+      HeaderValue::HTTP(val) => {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(val);
+
+        return bytes;
+      },
+      HeaderValue::Body(val) => {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(val);
+
+        return bytes;
+      },
+      HeaderValue::EndOfBody(val) => {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        match val {
+          Some(val) => {
+            bytes.extend(val);
+
+            return bytes;
+          },
+          // Note: We may want to not panic here this could have unintended side effects.
+          None => {
+            panic!("Cannot endoing a missing End of Body Value")
+          }
         }
+      },
+      HeaderValue::Who(val) => {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(val);
+
+        return bytes;
+      },
+      HeaderValue::ConnectionID(val) => {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(val);
+
+        return bytes;
+      },
+      HeaderValue::ApplicationParameters() => {
+        todo!("Implement application parameters");
+      },
+      HeaderValue::AuthenticateChallenge() => {
+        todo!("Implement authenticate challenge");
+      },
+      HeaderValue::AuthenticateResponse() => {
+        todo!("Implement authenticate response");
+      },
+      HeaderValue::CreatorID(val) => {
+        let value = val.to_le_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::WANUUID(val) => {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(val);
+
+        return bytes;
+      },
+      HeaderValue::ObjectClass(val) => {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(val);
+
+        return bytes;
+      },
+      HeaderValue::SessionParameters() => {
+        todo!("Implement Session Parameters");
+      },
+      HeaderValue::SessionSequenceNumber(val) => {
+        let value = val.to_le_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::ActionID(val) => {
+        let value = val.to_le_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::DestName(val) => {
+        let value = val.as_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::Permissions(val) => {
+        let value = val.to_le_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::SingleResponseMode(val) => {
+        let value = val.to_le_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      },
+      HeaderValue::SingleResponseModeParameters(val) => {
+        let value = val.to_le_bytes();
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend(value);
+
+        return bytes;
+      }
     }
+  }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum HeaderID {
+  Count = 0xC0,
+  Name = 0x01,
+  Type = 0x42,
+  Length = 0xC3,
+  Time = 0x44,
+  Description = 0x05,
+  Target = 0x46,
+  HTTP = 0x47,
+  Body = 0x48,
+  EndOfBody = 0x49,
+  Who = 0x4A,
+  ConnectionID = 0xCB,
+  ApplicationParameters = 0x4C,
+  AuthenticateChallenge = 0x4D,
+  AuthenticateResponse = 0x4E,
+  CreatorID = 0xCF,
+  WANUUID = 0x50,
+  ObjectClass = 0x51,
+  SessionParameters = 0x52,
+  SessionSequenceNumber = 0x93,
+  ActionID = 0x94,
+  DestName = 0x15,
+  Permissions = 0xD6,
+  SingleResponseMode = 0x97,
+  SingleResponseModeParameters = 0x98,
 }
 
 impl From<HeaderID> for u8 {
@@ -497,6 +654,50 @@ impl From<HeaderID> for u8 {
       HeaderID::SingleResponseModeParameters => 0x98,
     }
   }
+}
+
+impl TryFrom<u8> for HeaderID {
+    type Error = HeaderIDError;
+
+    /// Atttempts to convert a `u8` to a valid `HeaderID`
+    ///
+    /// # Examples
+    /// ```
+    /// # use obex::object::HeaderID;
+    /// let header_id: HeaderID = HeaderID::try_from(0xC0).unwrap();
+    ///
+    /// assert_eq!(HeaderID::Count, header_id);
+    /// ```
+    fn try_from(original: u8) -> Result<Self, Self::Error> {
+        match original {
+          0xC0 => Ok(HeaderID::Count),
+          0x01 => Ok(HeaderID::Name),
+          0x42 => Ok(HeaderID::Type),
+          0xC3 => Ok(HeaderID::Length),
+          0x44 => Ok(HeaderID::Time),
+          0x05 => Ok(HeaderID::Description),
+          0x46 => Ok(HeaderID::Target),
+          0x47 => Ok(HeaderID::HTTP),
+          0x48 => Ok(HeaderID::Body),
+          0x49 => Ok(HeaderID::EndOfBody),
+          0x4A => Ok(HeaderID::Who),
+          0xCB => Ok(HeaderID::ConnectionID),
+          0x4C => Ok(HeaderID::ApplicationParameters),
+          0x4D => Ok(HeaderID::AuthenticateChallenge),
+          0x4E => Ok(HeaderID::AuthenticateResponse),
+          0xCF => Ok(HeaderID::CreatorID),
+          0x50 => Ok(HeaderID::WANUUID),
+          0x51 => Ok(HeaderID::ObjectClass),
+          0x52 => Ok(HeaderID::SessionParameters),
+          0x93 => Ok(HeaderID::SessionSequenceNumber),
+          0x94 => Ok(HeaderID::ActionID),
+          0x15 => Ok(HeaderID::DestName),
+          0xD6 => Ok(HeaderID::Permissions),
+          0x97 => Ok(HeaderID::SingleResponseMode),
+          0x98 => Ok(HeaderID::SingleResponseModeParameters),
+          _ => Err(HeaderIDError)
+        }
+    }
 }
 
 impl HeaderID {
