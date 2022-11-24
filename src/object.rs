@@ -1223,3 +1223,18 @@ pub struct TagLengthValue {
   pub length: u8,
   pub value: Vec<u8>, // TODO: Should be implemented as a bounded array of a fixed maximum size of 255 bytes and minimum size of 0 bytes
 }
+
+impl From<TagLengthValue> for Vec<u8> {
+  fn from(value: TagLengthValue) -> Vec<u8> {
+      let mut bytes: Vec<u8> = Vec::new();
+
+      bytes.push(value.tag);
+      bytes.push(value.length);
+      bytes.extend(value.value);
+
+      return bytes;
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct TagLengthValueError;
