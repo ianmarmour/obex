@@ -1,5 +1,5 @@
 use ascii::{AsciiString};
-use nom::{error::ParseError, IResult, number::complete::{le_u8, le_u32, le_u16}, multi::count};
+use nom::{error::ParseError, IResult, bytes::complete::take, number::complete::{le_u8, le_u32, le_u16}, multi::count, multi::many0 };
 
 pub struct Header {
   pub id: HeaderID,
@@ -438,9 +438,20 @@ impl Header {
 
         Ok((i, header))
       },
-      // TODO: Implement ApplicationParameters
       HeaderID::ApplicationParameters => {
-        panic!("ApplicationParameters Unimplemented");
+        let (i, length) = le_u16(i)?;
+        let (i, tlvs) = take(length)(i)?;
+
+        // We want the proceeding take parser to consume all of the real data from
+        // our input, the input response of this TLV parser isn't needed for headers.
+        let (_, value) = many0(TagLengthValue::parse)(tlvs)?;
+
+        let header: Header = Header {
+          id: id,
+          value: HeaderValue::ApplicationParameters(value)
+        };
+
+        Ok((i, header))
       },
       // TODO: Implement AuthenticateChallenge
       HeaderID::AuthenticateChallenge => {
@@ -586,7 +597,7 @@ pub enum HeaderValue {
   EndOfBody(Option<Vec<u8>>), // TODO: This may be wrong as it can be a null or empty header or contain value but no clue?
   Who(Vec<u8>),
   ConnectionID([u8; 4]),
-  ApplicationParameters(), // TODO: Implement Obex TLV Parsing
+  ApplicationParameters(Vec<TagLengthValue>), // TODO: Implement Obex TLV Parsing
   AuthenticateChallenge(), // TODO: Implement Obex TLV Parsing
   AuthenticateResponse(), // TODO: Implement Obex TLV Parsing
   CreatorID(u32),
@@ -998,8 +1009,16 @@ impl From<HeaderValue> for Vec<u8> {
 
         return bytes;
       },
-      HeaderValue::ApplicationParameters() => {
-        todo!("Implement application parameters");
+      HeaderValue::ApplicationParameters(val) => {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        for tag_length_value in val {
+          let data: Vec<u8> = tag_length_value.into();
+
+          bytes.extend(data);
+        }
+
+        return bytes;
       },
       HeaderValue::AuthenticateChallenge() => {
         todo!("Implement authenticate challenge");
@@ -1218,6 +1237,7 @@ pub struct HeaderIDError;
 #[derive(Debug, Clone)]
 pub struct HeaderError;
 
+#[derive(Debug, PartialEq, Clone)]
 pub struct TagLengthValue {
   pub tag: u8,
   pub length: u8,
@@ -1236,5 +1256,18 @@ impl From<TagLengthValue> for Vec<u8> {
   }
 }
 
-#[derive(Debug, Clone)]
-pub struct TagLengthValueError;
+impl TagLengthValue {
+  fn parse(i: &[u8]) -> IResult<&[u8], TagLengthValue> {
+    let (i, tag) = le_u8(i)?;
+    let (i, length) = le_u8(i)?;
+    let (i, value) = count(le_u8, length.into())(i)?;
+
+    let tag_length_value: TagLengthValue = TagLengthValue {
+      tag: tag,
+      length: length,
+      value:value,
+    };
+
+    return Ok((i, tag_length_value));
+  }
+}
