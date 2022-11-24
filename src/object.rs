@@ -633,6 +633,270 @@ impl From<HeaderValue> for Vec<u8> {
   ///
   /// assert_eq!(expected, bytes);
   /// ```
+  ///
+  /// Type
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  /// # use ascii::{AsciiString};
+  ///
+  /// // ASCII Byte representation of the word "test"
+  /// let mut expected = Vec::from([116, 101, 115, 116]);
+  ///
+  /// let value = HeaderValue::Type(AsciiString::from_ascii("test").unwrap());
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// Length
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // Little Endian Encoded 4 Byte representation of '2'
+  /// let mut expected = Vec::from([2,0,0,0]);
+  ///
+  /// let value = HeaderValue::Length(2);
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// Time
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  /// # use ascii::{AsciiString};
+  ///
+  /// // ASCII Byte representation of an  ISO 8601 DateTime "19940206T010101Z"
+  /// let mut expected = Vec::from([49, 57, 57, 52, 48, 50, 48, 54, 84, 48, 49, 48, 49, 48, 49, 90]);
+  ///
+  /// let value = HeaderValue::Time(AsciiString::from_ascii("19940206T010101Z").unwrap());
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// Description
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 Byte representation of the word "test"
+  /// let mut expected = Vec::from([0x74,0x65,0x73,0x74]);
+  ///
+  /// let value =  HeaderValue::Description("test".to_string());
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// Target
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 Byte representation of the word "test"
+  /// let expected = Vec::from([0x74,0x65,0x73,0x74]);
+  ///
+  /// let value =  HeaderValue::Target(expected.clone());
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// HTTP
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 Byte representation of the word "test"
+  /// let expected = Vec::from([0x74,0x65,0x73,0x74]);
+  ///
+  /// let value =  HeaderValue::HTTP(expected.clone());
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// Body
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 Byte representation of the word "test"
+  /// let expected = Vec::from([0x74,0x65,0x73,0x74]);
+  ///
+  /// let value =  HeaderValue::Body(expected.clone());
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// EndOfBody
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 Byte representation of the word "test"
+  /// let expected = Vec::from([0x74,0x65,0x73,0x74]);
+  ///
+  /// let value =  HeaderValue::EndOfBody(Some(expected.clone()));
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// Who
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 Byte representation of the word "test"
+  /// let expected = Vec::from([0x74,0x65,0x73,0x74]);
+  ///
+  /// let value =  HeaderValue::Who(expected.clone());
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// ConnectionID
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 4 byte value
+  /// let expected = Vec::from([0,1,2,3]);
+  ///
+  /// let value =  HeaderValue::ConnectionID([0,1,2,3]);
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// CreatorID
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // Little Endian encoded integer value
+  /// let expected = Vec::from([2, 0, 0, 0]);
+  ///
+  /// let value =  HeaderValue::CreatorID(2);
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// WANUUID
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 4 byte value
+  /// let expected = Vec::from([0,1,2,3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+  ///
+  /// let value =  HeaderValue::WANUUID([0,1,2,3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// ObjectClass
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 Byte representation of the word "test"
+  /// let expected = Vec::from([0x74,0x65,0x73,0x74]);
+  ///
+  /// let value =  HeaderValue::ObjectClass(expected.clone());
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// SessionSequenceNumber
+  /// ```
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // Little Endian encoded integer value
+  /// let expected = Vec::from([1]);
+  ///
+  /// let value =  HeaderValue::SessionSequenceNumber(1);
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// ActionID
+  /// ```
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // Little Endian encoded integer value
+  /// let expected = Vec::from([1]);
+  ///
+  /// let value =  HeaderValue::ActionID(1);
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// DestName
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // UTF-8 Byte representation of the word "test"
+  /// let mut expected = Vec::from([0x74,0x65,0x73,0x74]);
+  ///
+  /// let value =  HeaderValue::DestName("test".to_string());
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// Permissions
+  /// ```
+  /// #
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // Little Endian encoded 32 bit representation of 2.
+  /// let mut expected = Vec::from([2,0,0,0]);
+  ///
+  /// let value =  HeaderValue::Permissions(2);
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// SingleResponseMode
+  /// ```
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // Little Endian encoded integer value
+  /// let expected = Vec::from([1]);
+  ///
+  /// let value =  HeaderValue::SingleResponseMode(1);
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
+  ///
+  /// SingleResponseModeParameters
+  /// ```
+  /// # use obex::object::HeaderValue;
+  ///
+  /// // Little Endian encoded integer value
+  /// let expected = Vec::from([1]);
+  ///
+  /// let value =  HeaderValue::SingleResponseModeParameters(1);
+  /// let bytes: Vec<u8> = value.into();
+  ///
+  /// assert_eq!(expected, bytes);
+  /// ```
   fn from(value: HeaderValue) -> Vec<u8> {
     match value {
       HeaderValue::Count(val) => {
