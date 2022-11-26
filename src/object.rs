@@ -453,7 +453,6 @@ impl Header {
 
         Ok((i, header))
       },
-      // TODO: Implement AuthenticateChallenge
       HeaderID::AuthenticateChallenge => {
         let (i, length) = le_u16(i)?;
         let (i, tlvs) = take(length)(i)?;
@@ -469,7 +468,6 @@ impl Header {
 
         Ok((i, header))
       },
-      // TODO: Implement AuthenticateResponse
       HeaderID::AuthenticateResponse => {
         let (i, length) = le_u16(i)?;
         let (i, tlvs) = take(length)(i)?;
@@ -524,7 +522,6 @@ impl Header {
 
         Ok((i, header))
       },
-      // TODO: Implement SessionParameters
       HeaderID::SessionParameters => {
         let (i, length) = le_u16(i)?;
         let (i, tlvs) = take(length)(i)?;
@@ -622,11 +619,11 @@ impl From<Header> for Vec<u8> {
 #[derive(Debug, PartialEq, Clone)]
 pub enum HeaderValue {
   Count(u32),
-  Name(String), // TODO: Is null terminated but rust does not use null terminated UTF-8
+  Name(String),
   Type(AsciiString),
   Length(u32),
-  Time(AsciiString), // TODO: Should be formatted ISO time not just some string
-  Description(String), // TODO: Is null terminated but rust does not use null terminated UTF-8
+  Time(AsciiString), // TODO: Implement chrono for proper DateTime formatting and just convert to AsciiString
+  Description(String),
   Target(Vec<u8>),
   HTTP(Vec<u8>),
   Body(Vec<u8>), // TODO: This may be wrong no idea if it's actually a Vec of U8 but probably is.
@@ -642,7 +639,7 @@ pub enum HeaderValue {
   SessionParameters(Vec<TagLengthValue>), // TODO: Implement SubTypes for SessionParameters???
   SessionSequenceNumber(u8),
   ActionID(u8),
-  DestName(String), // TODO: Is null terminated but rust does not null terminate UTF-8
+  DestName(String),
   Permissions(u32),
   SingleResponseMode(u8),
   SingleResponseModeParameters(u8)
@@ -961,6 +958,12 @@ impl From<HeaderValue> for Vec<u8> {
 
         bytes.extend(value);
 
+        // Rust Strings are not null terminated by default
+        // however the OBEX specification requires UTF-8
+        // encoded null terminated byte strings so we affix
+        // a null byte to any string.
+        bytes.push(0x0);
+
         return bytes;
       },
       HeaderValue::Type(val) => {
@@ -992,6 +995,12 @@ impl From<HeaderValue> for Vec<u8> {
         let mut bytes: Vec<u8> = Vec::new();
 
         bytes.extend(value);
+
+        // Rust Strings are not null terminated by default
+        // however the OBEX specification requires UTF-8
+        // encoded null terminated byte strings so we affix
+        // a null byte to any string.
+        bytes.push(0x0);
 
         return bytes;
       },
@@ -1109,6 +1118,12 @@ impl From<HeaderValue> for Vec<u8> {
 
         bytes.extend(value);
 
+        // Rust Strings are not null terminated by default
+        // however the OBEX specification requires UTF-8
+        // encoded null terminated byte strings so we affix
+        // a null byte to any string.
+        bytes.push(0x0);
+
         return bytes;
       },
       HeaderValue::Permissions(val) => {
@@ -1169,18 +1184,6 @@ pub enum HeaderID {
 }
 
 impl From<HeaderID> for u8 {
-  /// Convert a `HeaderID` to a `u8`:
-  ///
-  /// # Examples
-  ///
-  /// Count
-  /// ```
-  /// # use obex::object::HeaderID;
-  ///
-  /// let data: u8 = HeaderID::Count.into();
-  ///
-  /// assert_eq!(0xC0, data);
-  /// ```
   fn from(id: HeaderID) -> u8 {
     match id {
       HeaderID::Count => 0xC0,
@@ -1215,15 +1218,6 @@ impl From<HeaderID> for u8 {
 impl TryFrom<u8> for HeaderID {
     type Error = HeaderIDError;
 
-    /// Atttempts to convert a `u8` to a valid `HeaderID`
-    ///
-    /// # Examples
-    /// ```
-    /// # use obex::object::HeaderID;
-    /// let header_id: HeaderID = HeaderID::try_from(0xC0).unwrap();
-    ///
-    /// assert_eq!(HeaderID::Count, header_id);
-    /// ```
     fn try_from(original: u8) -> Result<Self, Self::Error> {
         match original {
           0xC0 => Ok(HeaderID::Count),
@@ -1307,3 +1301,106 @@ impl TagLengthValue {
     return Ok((i, tag_length_value));
   }
 }
+
+pub struct SessionParameter {
+  pub tag: SessionParameterTagValue,
+  pub length: u8,
+  pub value: Vec<u8>,
+}
+
+pub enum SessionParameterTagValue {
+  DeviceAddress = 0x00,
+  Nonce = 0x01,
+  SessionID = 0x02,
+  NextSequenceNumber = 0x03,
+  Timeout = 0x04,
+  SessionOpcode = 0x05,
+  ObjectOffset = 0x06
+}
+
+impl SessionParameterTagValue {
+  pub fn parse(i: &[u8]) -> IResult<&[u8], SessionParameterTagValue> {
+    let (i, id) = le_u8(i)?;
+
+    match SessionParameterTagValue::try_from(id) {
+      Ok(id) => { Ok((i, id)) },
+      Err(_) => Err(nom::Err::Failure(ParseError::from_error_kind(i, nom::error::ErrorKind::Fail))),
+    }
+  }
+}
+
+impl From<SessionParameterTagValue> for u8 {
+  fn from(value: SessionParameterTagValue) -> u8 {
+    match value {
+      SessionParameterTagValue::DeviceAddress => 0x00,
+      SessionParameterTagValue::Nonce => 0x01,
+      SessionParameterTagValue::SessionID => 0x02,
+      SessionParameterTagValue::NextSequenceNumber => 0x03,
+      SessionParameterTagValue::Timeout => 0x04,
+      SessionParameterTagValue::SessionOpcode => 0x05,
+      SessionParameterTagValue::ObjectOffset => 0x06,
+    }
+  }
+}
+
+impl TryFrom<u8> for SessionParameterTagValue {
+    type Error = SessionParameterTagValueError;
+
+    fn try_from(original: u8) -> Result<Self, Self::Error> {
+        match original {
+          0x00 => Ok(SessionParameterTagValue::DeviceAddress),
+          0x01 => Ok(SessionParameterTagValue::Nonce),
+          0x02 => Ok(SessionParameterTagValue::SessionID),
+          0x03 => Ok(SessionParameterTagValue::NextSequenceNumber),
+          0x04 => Ok(SessionParameterTagValue::Timeout),
+          0x05 => Ok(SessionParameterTagValue::SessionOpcode),
+          0x06 => Ok(SessionParameterTagValue::ObjectOffset),
+          _ => Err(SessionParameterTagValueError)
+        }
+    }
+}
+
+pub enum SessionParameterValue {
+  DeviceAddress([u8; 48]),
+  Nonce(Vec<u8>), // TODO: This should be a bounded array of at least 4 bytes and at most 16 bytes
+  SessionID([u8; 16]),
+  NextSequenceNumber(u8),
+  Timeout([u8; 4]), // TODO: Deal with ininite timeouts, should be a 4 byte value I'm not sure if u32 or [u8; 4] is correct here.
+  SessionOpcode(u8),
+  ObjectOffset(Vec<u8>) // TODO: Is an unsigned integer value and length is variable however it must be at least 4 bytes.
+}
+
+impl From<SessionParameterValue> for Vec<u8> {
+    fn from(value: SessionParameterValue) -> Vec<u8> {
+      match value {
+        SessionParameterValue::DeviceAddress(val) => {
+          let mut bytes: Vec<u8> = Vec::new();
+
+          bytes.extend(val);
+
+          return bytes;
+        },
+        SessionParameterValue::Nonce(_val) => {
+          todo!()
+        },
+        SessionParameterValue::SessionID(_val) => {
+          todo!()
+        },
+        SessionParameterValue::NextSequenceNumber(_val) => {
+          todo!()
+        },
+        SessionParameterValue::Timeout(_val) => {
+          todo!()
+        },
+        SessionParameterValue::SessionOpcode(_val) => {
+          todo!()
+        },
+        SessionParameterValue::ObjectOffset(_val) => {
+          todo!()
+        }
+      }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionParameterTagValueError;
