@@ -1366,7 +1366,7 @@ pub enum SessionParameterValue {
   SessionID([u8; 16]),
   NextSequenceNumber(u8),
   Timeout([u8; 4]), // TODO: Deal with ininite timeouts, should be a 4 byte value I'm not sure if u32 or [u8; 4] is correct here.
-  SessionOpcode(u8),
+  SessionOpcode(SessionOpcode),
   ObjectOffset(Vec<u8>) // TODO: Is an unsigned integer value and length is variable however it must be at least 4 bytes.
 }
 
@@ -1380,23 +1380,44 @@ impl From<SessionParameterValue> for Vec<u8> {
 
           return bytes;
         },
-        SessionParameterValue::Nonce(_val) => {
-          todo!()
+        SessionParameterValue::Nonce(val) => {
+          let mut bytes: Vec<u8> = Vec::new();
+
+          bytes.extend(val);
+
+          return bytes;
         },
         SessionParameterValue::SessionID(_val) => {
           todo!()
         },
-        SessionParameterValue::NextSequenceNumber(_val) => {
-          todo!()
+        SessionParameterValue::NextSequenceNumber(val) => {
+          let mut bytes: Vec<u8> = Vec::new();
+
+          bytes.push(val);
+
+          return bytes;
         },
-        SessionParameterValue::Timeout(_val) => {
-          todo!()
+        SessionParameterValue::Timeout(val) => {
+          let mut bytes: Vec<u8> = Vec::new();
+
+          bytes.extend(val);
+
+          return bytes;
         },
-        SessionParameterValue::SessionOpcode(_val) => {
-          todo!()
+        SessionParameterValue::SessionOpcode(val) => {
+          let mut bytes: Vec<u8> = Vec::new();
+          let byte: u8 = val.into();
+
+          bytes.push(byte);
+
+          return bytes;
         },
-        SessionParameterValue::ObjectOffset(_val) => {
-          todo!()
+        SessionParameterValue::ObjectOffset(val) => {
+          let mut bytes: Vec<u8> = Vec::new();
+
+          bytes.extend(val);
+
+          return bytes;
         }
       }
     }
@@ -1404,3 +1425,52 @@ impl From<SessionParameterValue> for Vec<u8> {
 
 #[derive(Debug, Clone)]
 pub struct SessionParameterTagValueError;
+
+pub enum SessionOpcode {
+  CreateSession = 0x00,
+  CloseSession = 0x01,
+  SuspendSession = 0x02,
+  ResumeSession = 0x03,
+  SetTimeout = 0x04,
+}
+
+impl From<SessionOpcode> for u8 {
+  fn from(value: SessionOpcode) -> u8 {
+    match value {
+      SessionOpcode::CreateSession => 0x00,
+      SessionOpcode::CloseSession => 0x01,
+      SessionOpcode::SuspendSession => 0x02,
+      SessionOpcode::ResumeSession => 0x03,
+      SessionOpcode::SetTimeout => 0x04,
+    }
+  }
+}
+
+impl TryFrom<u8> for SessionOpcode {
+    type Error = SessionOpcodeError;
+
+    fn try_from(original: u8) -> Result<Self, Self::Error> {
+        match original {
+          0x00 => Ok(SessionOpcode::CreateSession),
+          0x01 => Ok(SessionOpcode::CloseSession),
+          0x02 => Ok(SessionOpcode::SuspendSession),
+          0x03 => Ok(SessionOpcode::ResumeSession),
+          0x04 => Ok(SessionOpcode::SetTimeout),
+          _ => Err(SessionOpcodeError)
+        }
+    }
+}
+
+impl SessionOpcode {
+  pub fn parse(i: &[u8]) -> IResult<&[u8], SessionOpcode> {
+    let (i, id) = le_u8(i)?;
+
+    match SessionOpcode::try_from(id) {
+      Ok(id) => { Ok((i, id)) },
+      Err(_) => Err(nom::Err::Failure(ParseError::from_error_kind(i, nom::error::ErrorKind::Fail))),
+    }
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionOpcodeError;
