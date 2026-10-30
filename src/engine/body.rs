@@ -6,8 +6,9 @@
 //! packet (OBEX section 3).
 
 use std::collections::VecDeque;
-use std::io::{self, Read};
+use std::io;
 
+use super::io::Source;
 use crate::error::{Error, Result};
 use crate::header::Header;
 
@@ -18,7 +19,7 @@ pub(crate) struct BodySource<R> {
     eof: bool,
 }
 
-impl<R: Read> BodySource<R> {
+impl<R: Source> BodySource<R> {
     pub(crate) fn new(reader: R) -> BodySource<R> {
         BodySource {
             reader,
@@ -28,13 +29,13 @@ impl<R: Read> BodySource<R> {
     }
 
     /// Takes up to `capacity` bytes, returning `true` alongside the last chunk.
-    fn take(&mut self, capacity: usize) -> io::Result<(Vec<u8>, bool)> {
+    async fn take(&mut self, capacity: usize) -> io::Result<(Vec<u8>, bool)> {
         // Read one byte beyond the capacity to learn whether this chunk is the last.
         while !self.eof && self.pending.len() <= capacity {
             let start = self.pending.len();
             self.pending.resize(capacity + 1, 0);
 
-            match self.reader.read(&mut self.pending[start..]) {
+            match self.reader.read(&mut self.pending[start..]).await {
                 Ok(0) => {
                     self.pending.truncate(start);
                     self.eof = true;
@@ -72,7 +73,7 @@ pub(crate) struct Outgoing<R> {
     body: Option<BodySource<R>>,
 }
 
-impl<R: Read> Outgoing<R> {
+impl<R: Source> Outgoing<R> {
     /// `body` is `None` when no Body or End-of-Body header should be sent at all.
     pub(crate) fn new(headers: impl IntoIterator<Item = Header>, body: Option<R>) -> Outgoing<R> {
         Outgoing {
@@ -85,7 +86,7 @@ impl<R: Read> Outgoing<R> {
     ///
     /// `max_packet` is the remote device's maximum packet length and `prefix` the
     /// number of bytes before the headers.
-    pub(crate) fn next_packet(
+    pub(crate) async fn next_packet(
         &mut self,
         max_packet: usize,
         prefix: usize,
@@ -122,7 +123,7 @@ impl<R: Read> Outgoing<R> {
             return Ok((packet, false));
         }
 
-        let (chunk, last) = body.take(space - 3)?;
+        let (chunk, last) = body.take(space - 3).await?;
 
         if last {
             packet.push(Header::EndOfBody(chunk));
@@ -169,12 +170,15 @@ pub(crate) fn must_lead(header: &Header) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::io::{block_on, Blocking};
 
-    fn drain(outgoing: &mut Outgoing<&[u8]>, max_packet: usize) -> Vec<Vec<Header>> {
+    type Bytes<'a> = Blocking<&'a [u8]>;
+
+    fn drain(outgoing: &mut Outgoing<Bytes<'_>>, max_packet: usize) -> Vec<Vec<Header>> {
         let mut packets = Vec::new();
 
         loop {
-            let (packet, last) = outgoing.next_packet(max_packet, 3).unwrap();
+            let (packet, last) = block_on(outgoing.next_packet(max_packet, 3)).unwrap();
             packets.push(packet);
             if last {
                 return packets;
@@ -185,7 +189,10 @@ mod tests {
     #[test]
     fn body_is_split_and_terminated() {
         let body = [7u8; 600];
-        let mut outgoing = Outgoing::new(vec![Header::Name("a".to_string())], Some(&body[..]));
+        let mut outgoing = Outgoing::new(
+            vec![Header::Name("a".to_string())],
+            Some(Blocking(&body[..])),
+        );
         let packets = drain(&mut outgoing, 255);
 
         let mut received = Vec::new();
@@ -209,7 +216,7 @@ mod tests {
 
     #[test]
     fn empty_body_sends_empty_end_of_body() {
-        let mut outgoing = Outgoing::new(Vec::new(), Some(&[][..]));
+        let mut outgoing = Outgoing::new(Vec::new(), Some(Blocking(&[][..])));
 
         assert_eq!(
             vec![vec![Header::EndOfBody(Vec::new())]],
@@ -219,17 +226,17 @@ mod tests {
 
     #[test]
     fn missing_body_sends_no_body_headers() {
-        let mut outgoing: Outgoing<&[u8]> = Outgoing::new(vec![Header::Length(0)], None);
+        let mut outgoing: Outgoing<Bytes> = Outgoing::new(vec![Header::Length(0)], None);
 
         assert_eq!(vec![vec![Header::Length(0)]], drain(&mut outgoing, 255));
     }
 
     #[test]
     fn headers_that_do_not_fit_are_rejected() {
-        let mut outgoing: Outgoing<&[u8]> = Outgoing::new(vec![Header::Target(vec![0; 300])], None);
+        let mut outgoing: Outgoing<Bytes> = Outgoing::new(vec![Header::Target(vec![0; 300])], None);
 
         assert!(matches!(
-            outgoing.next_packet(255, 3),
+            block_on(outgoing.next_packet(255, 3)),
             Err(Error::HeaderTooLarge { id: 0x46, .. })
         ));
     }
@@ -237,13 +244,13 @@ mod tests {
     #[test]
     fn rewind_replays_the_same_packet() {
         let body = [1u8, 2, 3];
-        let mut outgoing = Outgoing::new(vec![Header::ConnectionID(1)], Some(&body[..]));
+        let mut outgoing = Outgoing::new(vec![Header::ConnectionID(1)], Some(Blocking(&body[..])));
 
-        let (first, last) = outgoing.next_packet(255, 3).unwrap();
+        let (first, last) = block_on(outgoing.next_packet(255, 3)).unwrap();
         outgoing.rewind(first.clone());
         outgoing.insert_early(Header::Count(1));
 
-        let (second, _) = outgoing.next_packet(255, 3).unwrap();
+        let (second, _) = block_on(outgoing.next_packet(255, 3)).unwrap();
         assert!(last);
         assert_eq!(
             vec![

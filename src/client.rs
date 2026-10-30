@@ -38,33 +38,16 @@
 //! # }
 //! ```
 //!
-use std::io::{self, Read, Write};
+use std::io::{Read, Write};
 
 use crate::action::{ActionID, Permissions};
-use crate::auth::{Credentials, DigestChallenge, DigestResponse};
-use crate::body::{must_lead, Outgoing};
-use crate::error::{Error, Result};
-use crate::header::{Header, HeaderID, Headers};
-use crate::opcode::Opcode;
-use crate::packet::{
-    ConnectParameters, Request, Response, SetPathFlags, MAXIMUM_PACKET_LENGTH,
-    MINIMUM_PACKET_LENGTH, PACKET_PREFIX_LENGTH,
-};
-use crate::response::ResponseCode;
+use crate::auth::{Credentials, DigestChallenge};
+use crate::engine::client::ClientEngine;
+use crate::engine::io::{block_on, Blocking};
+use crate::error::Result;
+use crate::header::{Header, Headers};
+use crate::packet::{Request, Response, SetPathFlags, MINIMUM_PACKET_LENGTH};
 use crate::session::SessionParameters;
-use crate::srm::SingleResponseMode;
-use crate::transport::PacketStream;
-
-type CredentialProvider = Box<dyn FnMut(&DigestChallenge) -> Option<Credentials> + Send>;
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum SrmState {
-    Disabled,
-    /// The server asked to enable SRM; the next PUT or GET confirms it.
-    Pending,
-    /// SRM is enabled for every operation on this connection.
-    Enabled,
-}
 
 /// The result of a GET operation.
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -77,15 +60,7 @@ pub struct GetResponse {
 
 /// The `Client` type. See [the module level documentation](index.html) for more.
 pub struct Client<T> {
-    stream: PacketStream<T>,
-    max_packet_length: u16,
-    remote_max_packet_length: u16,
-    connection_id: Option<u32>,
-    srm_supported: bool,
-    srm: SrmState,
-    srm_wait: bool,
-    credentials: Option<CredentialProvider>,
-    server_password: Option<Vec<u8>>,
+    engine: ClientEngine<Blocking<T>>,
 }
 
 impl<T: Read + Write> Client<T> {
@@ -95,15 +70,7 @@ impl<T: Read + Write> Client<T> {
     /// Single Response Mode until configured to.
     pub fn new(transport: T) -> Client<T> {
         Client {
-            stream: PacketStream::new(transport),
-            max_packet_length: MAXIMUM_PACKET_LENGTH,
-            remote_max_packet_length: MINIMUM_PACKET_LENGTH,
-            connection_id: None,
-            srm_supported: false,
-            srm: SrmState::Disabled,
-            srm_wait: false,
-            credentials: None,
-            server_password: None,
+            engine: ClientEngine::new(Blocking(transport)),
         }
     }
 
@@ -111,7 +78,7 @@ impl<T: Read + Write> Client<T> {
     ///
     /// Over L2CAP this must not exceed the channel MTU.
     pub fn with_max_packet_length(mut self, max_packet_length: u16) -> Client<T> {
-        self.max_packet_length = max_packet_length.max(MINIMUM_PACKET_LENGTH);
+        self.engine.max_packet_length = max_packet_length.max(MINIMUM_PACKET_LENGTH);
         self
     }
 
@@ -121,7 +88,7 @@ impl<T: Read + Write> Client<T> {
     /// and is used whenever the server confirms it. Only enable this when the transport
     /// provides its own flow control, such as L2CAP in Enhanced Retransmission Mode.
     pub fn with_single_response_mode(mut self, enabled: bool) -> Client<T> {
-        self.srm_supported = enabled;
+        self.engine.srm_supported = enabled;
         self
     }
 
@@ -136,49 +103,49 @@ impl<T: Read + Write> Client<T> {
     where
         F: FnMut(&DigestChallenge) -> Option<Credentials> + Send + 'static,
     {
-        self.credentials = Some(Box::new(provider));
+        self.engine.credentials = Some(Box::new(provider));
         self
     }
 
     /// Challenges the server during CONNECT and requires it to prove it knows `password`.
     pub fn with_server_authentication(mut self, password: impl Into<Vec<u8>>) -> Client<T> {
-        self.server_password = Some(password.into());
+        self.engine.server_password = Some(password.into());
         self
     }
 
     /// The Connection Id assigned by the server for a directed connection.
     pub fn connection_id(&self) -> Option<u32> {
-        self.connection_id
+        self.engine.connection_id
     }
 
     /// The largest packet this client can receive.
     pub fn max_packet_length(&self) -> u16 {
-        self.max_packet_length
+        self.engine.max_packet_length
     }
 
     /// The largest packet the server can receive, as negotiated during CONNECT.
     pub fn remote_max_packet_length(&self) -> u16 {
-        self.remote_max_packet_length
+        self.engine.remote_max_packet_length
     }
 
     /// Returns `true` if Single Response Mode is enabled for the whole connection.
     pub fn single_response_mode_enabled(&self) -> bool {
-        self.srm == SrmState::Enabled
+        self.engine.single_response_mode_enabled()
     }
 
     /// A reference to the underlying transport.
     pub fn get_ref(&self) -> &T {
-        self.stream.get_ref()
+        &self.engine.stream.get_ref().0
     }
 
     /// A mutable reference to the underlying transport.
     pub fn get_mut(&mut self) -> &mut T {
-        self.stream.get_mut()
+        &mut self.engine.stream.get_mut().0
     }
 
     /// Unwraps the underlying transport.
     pub fn into_inner(self) -> T {
-        self.stream.into_inner()
+        self.engine.stream.into_inner().0
     }
 
     /// Opens an OBEX connection.
@@ -188,58 +155,12 @@ impl<T: Read + Write> Client<T> {
     /// response carries no Who header matching the Target, the server connected to its
     /// default (inbox) service instead, and it is up to the caller whether to continue.
     pub fn connect(&mut self, headers: impl IntoIterator<Item = Header>) -> Result<Response> {
-        let mut headers: Headers = headers.into_iter().collect();
-
-        let challenge = self
-            .server_password
-            .as_ref()
-            .map(|_| DigestChallenge::new());
-        if let Some(challenge) = &challenge {
-            headers.push(challenge.clone().into());
-        }
-
-        let requested_srm = headers.single_response_mode() == Some(SingleResponseMode::Enable);
-        let request = Request::connect(ConnectParameters::new(self.max_packet_length), headers);
-        let response = self.exchange(request)?;
-
-        if !response.code.is_success() {
-            return Err(Error::Response(Box::new(response)));
-        }
-
-        if let (Some(challenge), Some(password)) = (&challenge, &self.server_password) {
-            match DigestResponse::find(&response.headers) {
-                Some(Ok(digest)) if digest.verify(challenge, password) => {}
-                _ => return Err(Error::AuthenticationFailed),
-            }
-        }
-
-        let parameters = response.connect.unwrap_or_default();
-        self.remote_max_packet_length = parameters.max_packet_length.max(MINIMUM_PACKET_LENGTH);
-        self.connection_id = response.headers.connection_id();
-        self.srm_wait = response
-            .headers
-            .single_response_mode_parameter()
-            .is_some_and(|parameter| parameter.requests_wait());
-        self.srm = match response.headers.single_response_mode() {
-            Some(SingleResponseMode::Enable) if requested_srm => SrmState::Enabled,
-            Some(SingleResponseMode::Enable) if self.srm_supported => SrmState::Pending,
-            _ => SrmState::Disabled,
-        };
-
-        Ok(response)
+        block_on(self.engine.connect(headers.into_iter().collect()))
     }
 
     /// Closes the OBEX connection. The transport stays open.
     pub fn disconnect(&mut self) -> Result<Response> {
-        let headers = self.with_connection_id(Vec::new());
-        let response = self.exchange(Request::new(Opcode::Disconnect, true, headers));
-
-        self.connection_id = None;
-        self.remote_max_packet_length = MINIMUM_PACKET_LENGTH;
-        self.srm = SrmState::Disabled;
-        self.srm_wait = false;
-
-        expect_success(response?)
+        block_on(self.engine.disconnect())
     }
 
     /// Sends an object to the server.
@@ -251,7 +172,10 @@ impl<T: Read + Write> Client<T> {
         headers: impl IntoIterator<Item = Header>,
         body: &[u8],
     ) -> Result<Response> {
-        self.put_inner(headers.into_iter().collect(), Some(body))
+        block_on(
+            self.engine
+                .put(headers.into_iter().collect(), Some(Blocking(body))),
+        )
     }
 
     /// Sends an object read from `body` to the server, streaming it packet by packet.
@@ -262,13 +186,19 @@ impl<T: Read + Write> Client<T> {
         headers: impl IntoIterator<Item = Header>,
         body: R,
     ) -> Result<Response> {
-        self.put_inner(headers.into_iter().collect(), Some(body))
+        block_on(
+            self.engine
+                .put(headers.into_iter().collect(), Some(Blocking(body))),
+        )
     }
 
     /// Sends a PUT without Body or End-of-Body headers, which requests deletion of the
     /// named object.
     pub fn delete(&mut self, headers: impl IntoIterator<Item = Header>) -> Result<Response> {
-        self.put_inner::<io::Empty>(headers.into_iter().collect(), None)
+        block_on(
+            self.engine
+                .put(headers.into_iter().collect(), None::<Blocking<&[u8]>>),
+        )
     }
 
     /// Requests an object from the server, collecting its body in memory.
@@ -286,93 +216,12 @@ impl<T: Read + Write> Client<T> {
     pub fn get_into<W: Write>(
         &mut self,
         headers: impl IntoIterator<Item = Header>,
-        mut sink: W,
+        sink: W,
     ) -> Result<Headers> {
-        let mut headers = self.with_connection_id(headers.into_iter().collect());
-        let (srm_header, mut srm) = self.srm_header();
-        let requested_srm = srm_header.is_some() && !srm;
-        insert_early(&mut headers, srm_header);
-
-        let mut outgoing: Outgoing<io::Empty> = Outgoing::new(headers, None);
-        let mut collected = Headers::new();
-        let mut first = true;
-        let mut can_retry = self.credentials.is_some();
-
-        // Request phase: send every request header, the last packet with the Final bit.
-        let mut response = loop {
-            let (packet, last) = outgoing.next_packet(self.remote_max(), PACKET_PREFIX_LENGTH)?;
-            let sent = (first && can_retry).then(|| packet.clone());
-            self.write_request(&Request::new(Opcode::Get, last, packet))?;
-
-            if !last && srm {
-                first = false;
-                continue;
-            }
-
-            let response = self.read_response()?;
-
-            if let Some(sent) = sent {
-                if let Some(answer) = self.answer_challenge(&response)? {
-                    outgoing.rewind(sent);
-                    outgoing.insert_early(answer);
-                    can_retry = false;
-                    continue;
-                }
-            }
-            can_retry = false;
-
-            if requested_srm && confirms_srm(&response) {
-                srm = true;
-            }
-
-            if last {
-                break response;
-            }
-
-            if response.code != ResponseCode::Continue {
-                return Err(Error::Response(Box::new(response)));
-            }
-
-            collect(response.headers, &mut collected, &mut io::sink())?;
-            first = false;
-        };
-
-        // Response phase: keep asking for the object until the server reports success.
-        loop {
-            let code = response.code;
-
-            if code != ResponseCode::Continue && !code.is_success() {
-                return Err(Error::Response(Box::new(response)));
-            }
-
-            if requested_srm && confirms_srm(&response) {
-                srm = true;
-            }
-
-            let additional = response
-                .headers
-                .single_response_mode_parameter()
-                .is_some_and(|parameter| parameter.requests_additional_packet());
-
-            let delivered = collect(response.headers, &mut collected, &mut sink);
-
-            if code.is_success() {
-                delivered?;
-                sink.flush()?;
-                return Ok(collected);
-            }
-
-            if let Err(error) = delivered {
-                let _ = self.abort_get(srm);
-                return Err(error.into());
-            }
-
-            if !srm || additional {
-                self.write_request(&Request::new(Opcode::Get, true, Headers::new()))?;
-            }
-
-            response = self.read_response()?;
-        }
+        block_on(
+            self.engine
+                .get_into(headers.into_iter().collect(), Blocking(sink)),
+        )
     }
 
     /// Changes the current folder on the server.
@@ -381,42 +230,22 @@ impl<T: Read + Write> Client<T> {
     /// Name header, which combined with `backup` moves to the parent folder, and an
     /// empty name resets to the root folder.
     pub fn set_path(&mut self, flags: SetPathFlags, name: Option<&str>) -> Result<Response> {
-        let mut headers = self.with_connection_id(Vec::new());
-        if let Some(name) = name {
-            headers.push(Header::Name(name.to_string()));
-        }
-
-        expect_success(self.exchange(Request::set_path(flags, headers))?)
+        block_on(self.engine.set_path(flags, name))
     }
 
     /// Changes the current folder to the root folder.
     pub fn set_path_root(&mut self) -> Result<Response> {
-        let flags = SetPathFlags {
-            backup: false,
-            no_create: true,
-        };
-
-        self.set_path(flags, Some(""))
+        block_on(self.engine.set_path_root())
     }
 
     /// Changes the current folder to the parent folder.
     pub fn set_path_parent(&mut self) -> Result<Response> {
-        let flags = SetPathFlags {
-            backup: true,
-            no_create: true,
-        };
-
-        self.set_path(flags, None)
+        block_on(self.engine.set_path_parent())
     }
 
     /// Enters the child folder `name`, optionally creating it if it does not exist.
     pub fn set_path_child(&mut self, name: &str, create: bool) -> Result<Response> {
-        let flags = SetPathFlags {
-            backup: false,
-            no_create: !create,
-        };
-
-        self.set_path(flags, Some(name))
+        block_on(self.engine.set_path_child(name, create))
     }
 
     /// Performs an ACTION operation. The Action Id header is added automatically.
@@ -425,44 +254,22 @@ impl<T: Read + Write> Client<T> {
         action: ActionID,
         headers: impl IntoIterator<Item = Header>,
     ) -> Result<Response> {
-        let mut all = vec![Header::ActionID(action)];
-        all.extend(headers);
-        let headers = self.with_connection_id(all);
-
-        expect_success(self.exchange(Request::new(Opcode::Action, true, headers))?)
+        block_on(self.engine.action(action, headers.into_iter().collect()))
     }
 
     /// Copies the object `source` to `destination` on the server.
     pub fn copy(&mut self, source: &str, destination: &str) -> Result<Response> {
-        self.action(
-            ActionID::Copy,
-            [
-                Header::Name(source.to_string()),
-                Header::DestName(destination.to_string()),
-            ],
-        )
+        block_on(self.engine.copy(source, destination))
     }
 
     /// Moves or renames the object `source` to `destination` on the server.
     pub fn move_object(&mut self, source: &str, destination: &str) -> Result<Response> {
-        self.action(
-            ActionID::MoveRename,
-            [
-                Header::Name(source.to_string()),
-                Header::DestName(destination.to_string()),
-            ],
-        )
+        block_on(self.engine.move_object(source, destination))
     }
 
     /// Sets the permissions of the object `name` on the server.
     pub fn set_permissions(&mut self, name: &str, permissions: Permissions) -> Result<Response> {
-        self.action(
-            ActionID::SetPermissions,
-            [
-                Header::Name(name.to_string()),
-                Header::Permissions(permissions),
-            ],
-        )
+        block_on(self.engine.set_permissions(name, permissions))
     }
 
     /// Sends a reliable session command.
@@ -473,10 +280,10 @@ impl<T: Read + Write> Client<T> {
         parameters: SessionParameters,
         headers: impl IntoIterator<Item = Header>,
     ) -> Result<Response> {
-        let mut all = vec![parameters.into()];
-        all.extend(headers);
-
-        expect_success(self.exchange(Request::new(Opcode::Session, true, all))?)
+        block_on(
+            self.engine
+                .session(parameters, headers.into_iter().collect()),
+        )
     }
 
     /// Sends an ABORT request outside of an operation and returns its response.
@@ -484,9 +291,7 @@ impl<T: Read + Write> Client<T> {
     /// Operations started by this client abort themselves when their body source or
     /// sink fails; this is for protocols layered on raw [`Client::request`] calls.
     pub fn abort(&mut self, headers: impl IntoIterator<Item = Header>) -> Result<Response> {
-        let headers = self.with_connection_id(headers.into_iter().collect());
-
-        self.exchange(Request::new(Opcode::Abort, true, headers))
+        block_on(self.engine.abort(headers.into_iter().collect()))
     }
 
     /// Sends a single request packet and returns the response, whatever its code.
@@ -494,227 +299,6 @@ impl<T: Read + Write> Client<T> {
     /// No headers are added and the request must fit in one packet. This is the
     /// building block for user defined opcodes and unusual exchanges.
     pub fn request(&mut self, request: Request) -> Result<Response> {
-        self.exchange(request)
+        block_on(self.engine.exchange(request))
     }
-
-    fn remote_max(&self) -> usize {
-        usize::from(self.remote_max_packet_length)
-    }
-
-    /// Prepends the Connection Id unless the headers already identify the service.
-    fn with_connection_id(&self, mut headers: Vec<Header>) -> Headers {
-        let identified = headers
-            .iter()
-            .any(|header| matches!(header, Header::ConnectionID(_) | Header::Target(_)));
-
-        if let (Some(id), false) = (self.connection_id, identified) {
-            headers.insert(0, Header::ConnectionID(id));
-        }
-
-        headers.into()
-    }
-
-    /// The SRM header to send with the next PUT or GET, and whether SRM is active
-    /// from the first packet on.
-    fn srm_header(&mut self) -> (Option<Header>, bool) {
-        let enable = Some(Header::SingleResponseMode(SingleResponseMode::Enable));
-
-        match self.srm {
-            SrmState::Enabled => (None, true),
-            SrmState::Pending => {
-                // Confirming the server's request enables SRM as soon as it arrives.
-                self.srm = SrmState::Enabled;
-                (enable, true)
-            }
-            SrmState::Disabled if self.srm_supported => (enable, false),
-            SrmState::Disabled => (None, false),
-        }
-    }
-
-    fn put_inner<R: Read>(&mut self, headers: Vec<Header>, body: Option<R>) -> Result<Response> {
-        let mut headers = self.with_connection_id(headers);
-        let (srm_header, mut srm) = self.srm_header();
-        let requested_srm = srm_header.is_some() && !srm;
-        insert_early(&mut headers, srm_header);
-
-        let mut outgoing = Outgoing::new(headers, body);
-        let mut wait = std::mem::take(&mut self.srm_wait);
-        let mut first = true;
-        let mut can_retry = self.credentials.is_some();
-
-        loop {
-            let (packet, last) = match outgoing.next_packet(self.remote_max(), PACKET_PREFIX_LENGTH)
-            {
-                Ok(packet) => packet,
-                Err(error) => {
-                    if !first {
-                        let _ = self.abort_put();
-                    }
-                    return Err(error);
-                }
-            };
-
-            let sent = (first && can_retry).then(|| packet.clone());
-            self.write_request(&Request::new(Opcode::Put, last, packet))?;
-
-            if !last && srm && !wait {
-                first = false;
-                continue;
-            }
-
-            let response = self.read_response()?;
-
-            if let Some(sent) = sent {
-                if let Some(answer) = self.answer_challenge(&response)? {
-                    outgoing.rewind(sent);
-                    outgoing.insert_early(answer);
-                    can_retry = false;
-                    continue;
-                }
-            }
-            can_retry = false;
-
-            if last {
-                return expect_success(response);
-            }
-
-            if response.code != ResponseCode::Continue {
-                return Err(Error::Response(Box::new(response)));
-            }
-
-            if requested_srm && confirms_srm(&response) {
-                srm = true;
-            }
-
-            wait = srm
-                && response
-                    .headers
-                    .single_response_mode_parameter()
-                    .is_some_and(|parameter| parameter.requests_wait());
-            first = false;
-        }
-    }
-
-    /// Aborts a PUT; the server sends exactly one response, to the ABORT.
-    fn abort_put(&mut self) -> Result<Response> {
-        let headers = self.with_connection_id(Vec::new());
-        self.write_request(&Request::new(Opcode::Abort, true, headers))?;
-
-        self.read_response()
-    }
-
-    /// Aborts a GET. Under SRM the server may still be streaming the object, so
-    /// responses are skipped until the one answering the ABORT arrives.
-    fn abort_get(&mut self, srm: bool) -> Result<Response> {
-        let headers = self.with_connection_id(Vec::new());
-        self.write_request(&Request::new(Opcode::Abort, true, headers))?;
-
-        loop {
-            let response = self.read_response()?;
-            let object_data = response.code == ResponseCode::Continue
-                || response.headers.contains(HeaderID::EndOfBody);
-
-            if !(srm && object_data) {
-                return Ok(response);
-            }
-        }
-    }
-
-    /// Sends a single packet request, answering one authentication challenge.
-    fn exchange(&mut self, mut request: Request) -> Result<Response> {
-        let mut retried = false;
-
-        loop {
-            self.write_request(&request)?;
-
-            let response = if request.opcode == Opcode::Connect {
-                self.stream.read_connect_response()?
-            } else {
-                self.read_response()?
-            };
-
-            if !retried {
-                if let Some(answer) = self.answer_challenge(&response)? {
-                    insert_early(&mut request.headers, Some(answer));
-                    retried = true;
-                    continue;
-                }
-            }
-
-            return Ok(response);
-        }
-    }
-
-    /// Builds an Authenticate Response for an `Unauthorized` response, if possible.
-    fn answer_challenge(&mut self, response: &Response) -> Result<Option<Header>> {
-        if response.code != ResponseCode::Unauthorized {
-            return Ok(None);
-        }
-
-        let Some(provider) = self.credentials.as_mut() else {
-            return Ok(None);
-        };
-
-        // The first challenge is the most general one (OBEX section 3.6).
-        let Some(challenge) = DigestChallenge::find_all(&response.headers)?
-            .into_iter()
-            .next()
-        else {
-            return Ok(None);
-        };
-
-        Ok(provider(&challenge).map(|credentials| challenge.respond(&credentials).into()))
-    }
-
-    fn write_request(&mut self, request: &Request) -> Result<()> {
-        let bytes = request.to_bytes()?;
-
-        if request.opcode != Opcode::Connect && bytes.len() > self.remote_max() {
-            return Err(Error::PacketTooLarge {
-                length: bytes.len(),
-                maximum: self.remote_max(),
-            });
-        }
-
-        self.stream.write_packet(&bytes)
-    }
-
-    fn read_response(&mut self) -> Result<Response> {
-        self.stream.read_response()
-    }
-}
-
-fn expect_success(response: Response) -> Result<Response> {
-    if response.code.is_success() {
-        Ok(response)
-    } else {
-        Err(Error::Response(Box::new(response)))
-    }
-}
-
-fn confirms_srm(response: &Response) -> bool {
-    response.headers.single_response_mode() == Some(SingleResponseMode::Enable)
-}
-
-fn insert_early(headers: &mut Headers, header: Option<Header>) {
-    if let Some(header) = header {
-        let index = headers
-            .iter()
-            .take_while(|header| must_lead(header))
-            .count();
-        headers.insert(index, header);
-    }
-}
-
-/// Moves non-body headers into `collected` and writes body data to `sink`.
-fn collect<W: Write>(headers: Headers, collected: &mut Headers, sink: &mut W) -> io::Result<()> {
-    for header in headers {
-        match header {
-            Header::Body(data) | Header::EndOfBody(data) => sink.write_all(&data)?,
-            Header::SingleResponseMode(_) | Header::SingleResponseModeParameters(_) => {}
-            header => collected.push(header),
-        }
-    }
-
-    Ok(())
 }

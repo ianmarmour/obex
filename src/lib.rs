@@ -38,14 +38,26 @@
 //! packet operations, directed connections with Connection Ids, Single Response
 //! Mode, authentication and ABORT.
 //!
+//! ### Async
+//!
+//! With the `tokio` feature, `obex::tokio` provides async versions of the client,
+//! server, handler trait and packet stream for transports implementing tokio's
+//! `AsyncRead` and `AsyncWrite`. The blocking and async APIs run the same protocol
+//! engine, so they behave identically and interoperate freely.
+//!
+//! ```toml
+//! [dependencies]
+//! obex = { version = "0.0.1", features = ["tokio"] }
+//! ```
+//!
 //! ## Transports
 //!
 //! OBEX needs a reliable, ordered byte stream. On Bluetooth that is an RFCOMM channel
 //! (GOEP 1.x) or an L2CAP channel in Enhanced Retransmission Mode (GOEP 2.x), found
 //! through SDP. Opening those sockets is the job of a Bluetooth stack (BlueZ, for
 //! example through the `bluer` crate, or the platform APIs); anything that implements
-//! [`std::io::Read`] and [`std::io::Write`] can be handed to this crate. OBEX over TCP
-//! uses port 650.
+//! [`std::io::Read`] and [`std::io::Write`], or tokio's async equivalents, can be
+//! handed to this crate. OBEX over TCP uses port 650.
 //!
 //! ## Example
 //!
@@ -88,9 +100,11 @@ pub mod session;
 pub mod srm;
 pub mod target;
 pub mod tlv;
+#[cfg(feature = "tokio")]
+pub mod tokio;
 pub mod transport;
 
-mod body;
+mod engine;
 mod md5;
 
 pub use crate::error::{Error, Result};

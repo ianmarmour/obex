@@ -17,12 +17,11 @@
 //! [`Client`](crate::client::Client) or [`Server`](crate::server::Server) to be no
 //! larger than the channel MTU so every OBEX packet fits in one L2CAP SDU.
 //!
-use std::io::{self, Read, Write};
+use std::io::{Read, Write};
 
-use crate::error::{Error, Result};
-use crate::packet::{packet_length, Request, Response, PACKET_PREFIX_LENGTH};
-
-const READ_BUFFER_LENGTH: usize = u16::MAX as usize + 1;
+use crate::engine::io::{block_on, Blocking, Framed};
+use crate::error::Result;
+use crate::packet::{Request, Response};
 
 /// The `PacketStream` type. See [the module level documentation](index.html) for more.
 ///
@@ -38,126 +37,82 @@ const READ_BUFFER_LENGTH: usize = u16::MAX as usize + 1;
 /// assert!(matches!(stream.read_packet(), Err(obex::Error::Disconnected)));
 /// ```
 pub struct PacketStream<T> {
-    inner: T,
-    buffer: Vec<u8>,
-    scratch: Box<[u8]>,
+    inner: Framed<Blocking<T>>,
 }
 
 impl<T> PacketStream<T> {
     /// Wraps a transport.
     pub fn new(inner: T) -> PacketStream<T> {
         PacketStream {
-            inner,
-            buffer: Vec::new(),
-            scratch: vec![0u8; READ_BUFFER_LENGTH].into_boxed_slice(),
+            inner: Framed::new(Blocking(inner)),
         }
     }
 
     /// A reference to the underlying transport.
     pub fn get_ref(&self) -> &T {
-        &self.inner
+        &self.inner.get_ref().0
     }
 
     /// A mutable reference to the underlying transport.
     ///
     /// Reading from it directly will desynchronize the packet stream.
     pub fn get_mut(&mut self) -> &mut T {
-        &mut self.inner
+        &mut self.inner.get_mut().0
     }
 
     /// Unwraps the underlying transport, discarding any buffered bytes.
     pub fn into_inner(self) -> T {
-        self.inner
+        self.inner.into_inner().0
     }
 }
 
 impl<T: Read> PacketStream<T> {
     /// Reads one complete packet.
     ///
-    /// Returns [`Error::Disconnected`] if the transport is closed between packets.
+    /// Returns [`Error::Disconnected`](crate::Error::Disconnected) if the transport is
+    /// closed between packets.
     pub fn read_packet(&mut self) -> Result<Vec<u8>> {
-        loop {
-            if let Some(length) = packet_length(&self.buffer) {
-                if length < PACKET_PREFIX_LENGTH {
-                    return Err(Error::Malformed(nom::error::ErrorKind::LengthValue));
-                }
-
-                if self.buffer.len() == length {
-                    return Ok(std::mem::take(&mut self.buffer));
-                }
-
-                if self.buffer.len() > length {
-                    let rest = self.buffer.split_off(length);
-                    return Ok(std::mem::replace(&mut self.buffer, rest));
-                }
-            }
-
-            let read = match self.inner.read(&mut self.scratch) {
-                Ok(read) => read,
-                Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
-                Err(error) => return Err(error.into()),
-            };
-
-            if read == 0 {
-                return Err(if self.buffer.is_empty() {
-                    Error::Disconnected
-                } else {
-                    Error::Io(io::ErrorKind::UnexpectedEof.into())
-                });
-            }
-
-            self.buffer.extend_from_slice(&self.scratch[..read]);
-        }
+        block_on(self.inner.read_packet())
     }
 
     /// Reads and parses a request packet.
     pub fn read_request(&mut self) -> Result<Request> {
-        let packet = self.read_packet()?;
-        let (_, request) = Request::parse(&packet)?;
-
-        Ok(request)
+        block_on(self.inner.read_request())
     }
 
     /// Reads and parses a response to any request other than CONNECT.
     pub fn read_response(&mut self) -> Result<Response> {
-        let packet = self.read_packet()?;
-        let (_, response) = Response::parse(&packet)?;
-
-        Ok(response)
+        block_on(self.inner.read_response())
     }
 
     /// Reads and parses a response to a CONNECT request.
     pub fn read_connect_response(&mut self) -> Result<Response> {
-        let packet = self.read_packet()?;
-        let (_, response) = Response::parse_connect(&packet)?;
-
-        Ok(response)
+        block_on(self.inner.read_connect_response())
     }
 }
 
 impl<T: Write> PacketStream<T> {
     /// Writes one complete packet in a single `write_all` and flushes it.
     pub fn write_packet(&mut self, packet: &[u8]) -> Result<()> {
-        self.inner.write_all(packet)?;
-        self.inner.flush()?;
-
-        Ok(())
+        block_on(self.inner.write_packet(packet))
     }
 
     /// Encodes and writes a request.
     pub fn write_request(&mut self, request: &Request) -> Result<()> {
-        self.write_packet(&request.to_bytes()?)
+        block_on(self.inner.write_request(request))
     }
 
     /// Encodes and writes a response.
     pub fn write_response(&mut self, response: &Response) -> Result<()> {
-        self.write_packet(&response.to_bytes()?)
+        block_on(self.inner.write_response(response))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::Error;
+    use std::io;
 
     /// Returns at most one byte per read.
     struct Trickle<'a>(&'a [u8]);

@@ -18,7 +18,8 @@ This library is a building block. It implements OBEX itself, complete and transp
 +----------------------------------------------------------+
 |  Profiles: MAP, PBAP, FTP, OPP, BIP, SYNC ...            |  your crates
 +----------------------------------------------------------+
-|  obex::client::Client         obex::server::Server       |  protocol engines
+|  obex::client / obex::server   (blocking)                |  protocol engines
+|  obex::tokio::{Client, Server} (async, `tokio` feature)  |
 |  obex::header  obex::packet  obex::auth  obex::srm  ...  |  codec (no I/O)
 +----------------------------------------------------------+
 |  RFCOMM (GOEP 1.x)   L2CAP ERTM (GOEP 2.x)   TCP :650    |  any Read + Write
@@ -29,6 +30,7 @@ This library is a building block. It implements OBEX itself, complete and transp
 * **Client**: CONNECT, DISCONNECT, PUT (streaming), GET (streaming), SETPATH, ACTION (copy, move, permissions), SESSION and ABORT.
 * **Server**: a `Handler` trait receives complete operations; the server does the packet work. You need this for the profile roles where your device is the one being connected to, such as the MAP Message Notification Server.
 * **Transport framing** for both stream sockets (RFCOMM, TCP) and sequenced packet sockets (L2CAP `SOCK_SEQPACKET`).
+* **Async** (optional `tokio` feature): `obex::tokio` has async versions of the client, server, handler and packet stream. The blocking and async APIs run the same protocol engine, so they behave identically and can talk to each other.
 
 Both engines handle packet size negotiation, multi-packet requests and responses, directed connections (Target, Who and Connection Id), Single Response Mode, digest authentication and ABORT.
 
@@ -91,6 +93,38 @@ let bytes = Request::new(Opcode::Get, true, [Header::Name("pb.vcf".to_string())]
 let (_, response) = Response::parse(&incoming)?;
 ```
 
+### Async (tokio)
+
+Enable the `tokio` feature:
+
+```toml
+[dependencies]
+obex = { version = "0.0.1", features = ["tokio"] }
+```
+
+The API mirrors the blocking one, with `.await` and `async fn` handlers. It works with any `AsyncRead + AsyncWrite` transport, such as `bluer`'s RFCOMM and L2CAP streams. Client, server and handler futures are `Send`, so they can be spawned on a multi-threaded runtime.
+
+```rust
+use obex::header::Header;
+use obex::packet::{Request, Response};
+use obex::response::ResponseCode;
+use obex::tokio::{Client, Handler, Server};
+
+struct Notifications;
+
+impl Handler for Notifications {
+    async fn put(&mut self, request: &Request, body: Option<Vec<u8>>) -> Response {
+        Response::new(ResponseCode::Success)
+    }
+}
+
+tokio::spawn(async move { Server::new(server_socket, Notifications).run().await });
+
+let mut client = Client::new(client_socket).with_single_response_mode(true);
+client.connect([]).await?;
+let object = client.get([Header::Name("inbox".to_string())]).await?;
+```
+
 ## Building a Profile on Top
 
 Profiles choose a Target, then send Names, Types and Application Parameters. A Message Access Profile client, for example, is mostly constants:
@@ -135,6 +169,10 @@ The other half of MAP, the Message Notification Server, is a `Handler` that acce
 cargo run --example loopback
 ```
 
+```bash
+cargo run --example tokio_loopback --features tokio
+```
+
 ## Specification Coverage
 
 | OBEX 1.5 section                          | Status |
@@ -150,3 +188,7 @@ cargo run --example loopback
 | 9. Folder listing, capability and object profile objects | Type constants only; XML parsing is left to profile crates |
 
 The specification is in [`docs/OBEX15.pdf`](docs/OBEX15.pdf).
+
+## Minimum Supported Rust Version
+
+Rust 1.85, checked in CI.
