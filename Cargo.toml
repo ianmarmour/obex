@@ -1,5 +1,6 @@
 [package]
-# `obex` is taken on crates.io; the library is still imported as `obex`.
+# `obex` is taken on crates.io. Profile crates built on this one are named
+# `obex-protocol-<profile>`, e.g. obex-protocol-map.
 name = "obex-protocol"
 version = "0.1.0"
 authors = ["Ian Armour <ianmarmour@gmail.com>"]
@@ -17,11 +18,10 @@ categories = ["encoding", "network-programming"]
 exclude = ["docs/", ".devcontainer/", ".github/"]
 
 [lib]
-name = "obex"
 path = "src/lib.rs"
 
 [features]
-# Async client, server and packet stream for tokio, in `obex::tokio`.
+# Async client, server and packet stream for tokio, in `obex_protocol::tokio`.
 tokio = ["dep:tokio"]
 
 [dependencies]

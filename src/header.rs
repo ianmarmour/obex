@@ -53,7 +53,7 @@ impl From<u8> for HeaderEncoding {
     ///
     /// # Examples
     /// ```
-    /// # use obex::header::HeaderEncoding;
+    /// # use obex_protocol::header::HeaderEncoding;
     /// assert_eq!(HeaderEncoding::Unicode, HeaderEncoding::from(0x01));
     /// assert_eq!(HeaderEncoding::Bytes, HeaderEncoding::from(0x48));
     /// assert_eq!(HeaderEncoding::U8, HeaderEncoding::from(0xB0));
@@ -131,7 +131,7 @@ impl From<HeaderID> for u8 {
     ///
     /// # Examples
     /// ```
-    /// # use obex::header::HeaderID;
+    /// # use obex_protocol::header::HeaderID;
     /// let data: u8 = HeaderID::ConnectionID.into();
     ///
     /// assert_eq!(0xCB, data);
@@ -148,7 +148,7 @@ impl TryFrom<u8> for HeaderID {
     ///
     /// # Examples
     /// ```
-    /// # use obex::header::HeaderID;
+    /// # use obex_protocol::header::HeaderID;
     /// assert_eq!(Ok(HeaderID::Body), HeaderID::try_from(0x48));
     /// assert!(HeaderID::try_from(0x30).is_err()); // User defined
     /// ```
@@ -190,7 +190,7 @@ impl HeaderID {
     ///
     /// # Examples
     /// ```
-    /// # use obex::header::HeaderID;
+    /// # use obex_protocol::header::HeaderID;
     /// let data: [u8; 2] = [0x01, 0x00];
     /// let (data, id) = HeaderID::parse(&data).unwrap();
     ///
@@ -325,9 +325,9 @@ impl Header {
     ///
     /// # Examples
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// assert_eq!(0x01, Header::Name("a".to_string()).id());
-    /// assert_eq!(0x30, Header::Other { id: 0x30, value: obex::header::HeaderValue::Unicode("x".into()) }.id());
+    /// assert_eq!(0x30, Header::Other { id: 0x30, value: obex_protocol::header::HeaderValue::Unicode("x".into()) }.id());
     /// ```
     pub fn id(&self) -> u8 {
         let id = match self {
@@ -414,7 +414,7 @@ impl Header {
     ///
     /// # Examples
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// // HI + 2 byte length + 9 UTF-16 characters + 2 byte null terminator
     /// assert_eq!(0x17, Header::Name("JUMAR.TXT".to_string()).encoded_len());
     /// assert_eq!(5, Header::ConnectionID(1).encoded_len());
@@ -433,7 +433,7 @@ impl Header {
     ///
     /// Name
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// let mut bytes: Vec<u8> = Vec::new();
     /// Header::Name("ab".to_string()).encode(&mut bytes).unwrap();
     ///
@@ -442,7 +442,7 @@ impl Header {
     ///
     /// Empty Name
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// let mut bytes: Vec<u8> = Vec::new();
     /// Header::Name(String::new()).encode(&mut bytes).unwrap();
     ///
@@ -451,7 +451,7 @@ impl Header {
     ///
     /// Type
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// let mut bytes: Vec<u8> = Vec::new();
     /// Header::Type("pdf".to_string()).encode(&mut bytes).unwrap();
     ///
@@ -460,7 +460,7 @@ impl Header {
     ///
     /// Connection Id
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// let mut bytes: Vec<u8> = Vec::new();
     /// Header::ConnectionID(0x01020304).encode(&mut bytes).unwrap();
     ///
@@ -531,7 +531,7 @@ impl Header {
     ///
     /// Count
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// // Big-endian encoded 4 byte integer
     /// let data: [u8; 5] = [0xC0, 0, 0, 0, 4];
     /// let (data, header) = Header::parse(&data).unwrap();
@@ -541,7 +541,7 @@ impl Header {
     ///
     /// Name
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// // Length prefixed, null terminated UTF-16BE text
     /// let data: [u8; 13] = [0x01, 0, 13, 0, 116, 0, 101, 0, 120, 0, 116, 0, 0];
     /// let (data, header) = Header::parse(&data).unwrap();
@@ -551,7 +551,7 @@ impl Header {
     ///
     /// Type
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// // Length prefixed, null terminated ASCII text
     /// let data: [u8; 7] = [0x42, 0, 7, 112, 100, 102, 0];
     /// let (data, header) = Header::parse(&data).unwrap();
@@ -561,7 +561,7 @@ impl Header {
     ///
     /// Time
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// // Length prefixed ISO 8601 ASCII text
     /// let data: [u8; 19] = [0x44, 0, 19, 49, 57, 57, 52, 48, 50, 48, 54, 84, 48, 49, 48, 49, 48, 49, 90];
     /// let (data, header) = Header::parse(&data).unwrap();
@@ -571,7 +571,7 @@ impl Header {
     ///
     /// Body
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// // Length prefixed byte sequence
     /// let data: [u8; 8] = [0x48, 0, 8, 1, 2, 3, 4, 5];
     /// let (data, header) = Header::parse(&data).unwrap();
@@ -581,7 +581,7 @@ impl Header {
     ///
     /// Empty End of Body
     /// ```
-    /// # use obex::header::Header;
+    /// # use obex_protocol::header::Header;
     /// let data: [u8; 3] = [0x49, 0, 3];
     /// let (data, header) = Header::parse(&data).unwrap();
     ///
@@ -590,8 +590,8 @@ impl Header {
     ///
     /// Application Parameters
     /// ```
-    /// # use obex::header::Header;
-    /// # use obex::tlv::ApplicationParameters;
+    /// # use obex_protocol::header::Header;
+    /// # use obex_protocol::tlv::ApplicationParameters;
     /// let data: [u8; 7] = [0x4C, 0, 7, 0x01, 0x02, 0x00, 0x0A];
     /// let (data, header) = Header::parse(&data).unwrap();
     ///
@@ -600,8 +600,8 @@ impl Header {
     ///
     /// Single Response Mode
     /// ```
-    /// # use obex::header::Header;
-    /// # use obex::srm::SingleResponseMode;
+    /// # use obex_protocol::header::Header;
+    /// # use obex_protocol::srm::SingleResponseMode;
     /// let data: [u8; 2] = [0x97, 0x01];
     /// let (data, header) = Header::parse(&data).unwrap();
     ///
@@ -610,7 +610,7 @@ impl Header {
     ///
     /// User defined
     /// ```
-    /// # use obex::header::{Header, HeaderValue};
+    /// # use obex_protocol::header::{Header, HeaderValue};
     /// let data: [u8; 2] = [0xB0, 0x07];
     /// let (data, header) = Header::parse(&data).unwrap();
     ///
@@ -749,7 +749,7 @@ impl From<ApplicationParameters> for Header {
 ///
 /// # Examples
 /// ```
-/// # use obex::header::{Header, Headers};
+/// # use obex_protocol::header::{Header, Headers};
 /// let headers = Headers::from(vec![
 ///     Header::ConnectionID(1),
 ///     Header::Name("telecom/pb.vcf".to_string()),
@@ -954,7 +954,7 @@ impl Headers {
     ///
     /// # Examples
     /// ```
-    /// # use obex::header::{Header, Headers};
+    /// # use obex_protocol::header::{Header, Headers};
     /// let headers = Headers::from(vec![Header::Body(vec![1, 2]), Header::EndOfBody(vec![3])]);
     ///
     /// assert_eq!(Some(vec![1, 2, 3]), headers.body());
@@ -990,7 +990,7 @@ impl Headers {
     ///
     /// # Examples
     /// ```
-    /// # use obex::header::{Header, Headers};
+    /// # use obex_protocol::header::{Header, Headers};
     /// let data: [u8; 10] = [0xC0, 0, 0, 0, 4, 0xC3, 0, 0, 0xF4, 0x83];
     /// let (_, headers) = Headers::parse(&data).unwrap();
     ///

@@ -88,7 +88,7 @@ impl Default for ConnectParameters {
 ///
 /// # Examples
 /// ```
-/// # use obex::packet::SetPathFlags;
+/// # use obex_protocol::packet::SetPathFlags;
 /// let flags = SetPathFlags { backup: true, no_create: true };
 ///
 /// assert_eq!(0x03, u8::from(flags));
@@ -208,8 +208,8 @@ impl Request {
     ///
     /// The CONNECT request from OBEX 1.5 section 3.4.1.9:
     /// ```
-    /// # use obex::header::Header;
-    /// # use obex::packet::{ConnectParameters, Request};
+    /// # use obex_protocol::header::Header;
+    /// # use obex_protocol::packet::{ConnectParameters, Request};
     /// let request = Request::connect(
     ///     ConnectParameters::new(0x2000),
     ///     vec![Header::Count(4), Header::Length(0xF483)],
@@ -231,9 +231,9 @@ impl Request {
     ///
     /// # Examples
     /// ```
-    /// # use obex::header::Header;
-    /// # use obex::opcode::Opcode;
-    /// # use obex::packet::Request;
+    /// # use obex_protocol::header::Header;
+    /// # use obex_protocol::opcode::Opcode;
+    /// # use obex_protocol::packet::Request;
     /// // PUT, Final bit set, with an empty End of Body header
     /// let data: [u8; 6] = [0x82, 0x00, 0x06, 0x49, 0x00, 0x03];
     /// let (data, request) = Request::parse(&data).unwrap();
@@ -296,8 +296,8 @@ impl Response {
     ///
     /// # Examples
     /// ```
-    /// # use obex::packet::Response;
-    /// # use obex::response::ResponseCode;
+    /// # use obex_protocol::packet::Response;
+    /// # use obex_protocol::response::ResponseCode;
     /// let bytes = Response::new(ResponseCode::Success).to_bytes().unwrap();
     ///
     /// assert_eq!(vec![0xA0, 0x00, 0x03], bytes);
@@ -356,8 +356,8 @@ impl Response {
     ///
     /// The CONNECT response from OBEX 1.5 section 3.4.1.9:
     /// ```
-    /// # use obex::packet::{ConnectParameters, Response};
-    /// # use obex::response::ResponseCode;
+    /// # use obex_protocol::packet::{ConnectParameters, Response};
+    /// # use obex_protocol::response::ResponseCode;
     /// let response = Response {
     ///     connect: Some(ConnectParameters::new(0x0400)),
     ///     ..Response::new(ResponseCode::Success)
@@ -376,8 +376,8 @@ impl Response {
     ///
     /// # Examples
     /// ```
-    /// # use obex::packet::Response;
-    /// # use obex::response::ResponseCode;
+    /// # use obex_protocol::packet::Response;
+    /// # use obex_protocol::response::ResponseCode;
     /// let data: [u8; 8] = [0x90, 0x00, 0x08, 0xC3, 0x00, 0x00, 0x10, 0x00];
     /// let (data, response) = Response::parse(&data).unwrap();
     ///
@@ -392,8 +392,8 @@ impl Response {
     ///
     /// # Examples
     /// ```
-    /// # use obex::packet::Response;
-    /// # use obex::response::ResponseCode;
+    /// # use obex_protocol::packet::Response;
+    /// # use obex_protocol::response::ResponseCode;
     /// let data: [u8; 7] = [0xA0, 0x00, 0x07, 0x10, 0x00, 0x04, 0x00];
     /// let (data, response) = Response::parse_connect(&data).unwrap();
     ///
@@ -446,7 +446,7 @@ fn packet_body(i: &[u8]) -> IResult<&[u8], &[u8]> {
 ///
 /// # Examples
 /// ```
-/// # use obex::packet::packet_length;
+/// # use obex_protocol::packet::packet_length;
 /// assert_eq!(None, packet_length(&[0xA0, 0x00]));
 /// assert_eq!(Some(7), packet_length(&[0xA0, 0x00, 0x07]));
 /// ```

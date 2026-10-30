@@ -7,17 +7,17 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc};
 use std::thread;
 
-use obex::action::{ActionID, Permissions};
-use obex::auth::{Credentials, DigestChallenge};
-use obex::client::Client;
-use obex::header::{Header, HeaderValue};
-use obex::opcode::Opcode;
-use obex::packet::{Request, Response};
-use obex::response::ResponseCode;
-use obex::server::{Authentication, Handler, Object, Server};
-use obex::target::{FOLDER_BROWSING, MESSAGE_ACCESS};
-use obex::tlv::ApplicationParameters;
-use obex::Error;
+use obex_protocol::action::{ActionID, Permissions};
+use obex_protocol::auth::{Credentials, DigestChallenge};
+use obex_protocol::client::Client;
+use obex_protocol::header::{Header, HeaderValue};
+use obex_protocol::opcode::Opcode;
+use obex_protocol::packet::{Request, Response};
+use obex_protocol::response::ResponseCode;
+use obex_protocol::server::{Authentication, Handler, Object, Server};
+use obex_protocol::target::{FOLDER_BROWSING, MESSAGE_ACCESS};
+use obex_protocol::tlv::ApplicationParameters;
+use obex_protocol::Error;
 
 /// An in-memory folder tree served over OBEX.
 #[derive(Default)]
@@ -370,11 +370,11 @@ fn single_response_mode_per_connection() {
 
     let response = client
         .connect([Header::SingleResponseMode(
-            obex::srm::SingleResponseMode::Enable,
+            obex_protocol::srm::SingleResponseMode::Enable,
         )])
         .unwrap();
     assert_eq!(
-        Some(obex::srm::SingleResponseMode::Enable),
+        Some(obex_protocol::srm::SingleResponseMode::Enable),
         response.headers.single_response_mode()
     );
     assert!(client.single_response_mode_enabled());
@@ -759,11 +759,11 @@ fn l2cap_style_sequenced_packets_with_srm() {
 /// Runs a scripted server on the other end of a socket pair.
 fn scripted<F>(script: F) -> (UnixStream, thread::JoinHandle<()>)
 where
-    F: FnOnce(&mut obex::transport::PacketStream<UnixStream>) + Send + 'static,
+    F: FnOnce(&mut obex_protocol::transport::PacketStream<UnixStream>) + Send + 'static,
 {
     let (client, server) = UnixStream::pair().unwrap();
     let handle = thread::spawn(move || {
-        let mut stream = obex::transport::PacketStream::new(server);
+        let mut stream = obex_protocol::transport::PacketStream::new(server);
         script(&mut stream);
     });
 
@@ -772,7 +772,7 @@ where
 
 fn connect_response(headers: Vec<Header>) -> Response {
     Response {
-        connect: Some(obex::packet::ConnectParameters::new(4096)),
+        connect: Some(obex_protocol::packet::ConnectParameters::new(4096)),
         ..Response::with_headers(ResponseCode::Success, headers)
     }
 }
@@ -796,7 +796,7 @@ fn client_answers_challenge_on_an_operation() {
 
         // The retry carries the same object and a valid digest.
         let retry = stream.read_request().unwrap();
-        let digest = obex::auth::DigestResponse::find(&retry.headers)
+        let digest = obex_protocol::auth::DigestResponse::find(&retry.headers)
             .unwrap()
             .unwrap();
         assert!(digest.verify(&challenge, b"pw"));
@@ -822,14 +822,14 @@ fn client_confirms_server_initiated_srm() {
         stream.read_request().unwrap();
         stream
             .write_response(&connect_response(vec![Header::SingleResponseMode(
-                obex::srm::SingleResponseMode::Enable,
+                obex_protocol::srm::SingleResponseMode::Enable,
             )]))
             .unwrap();
 
         // Every PUT packet arrives without waiting for a response.
         let first = stream.read_request().unwrap();
         assert_eq!(
-            Some(obex::srm::SingleResponseMode::Enable),
+            Some(obex_protocol::srm::SingleResponseMode::Enable),
             first.headers.single_response_mode()
         );
         let mut packets = 1;
@@ -866,9 +866,9 @@ fn client_honors_srm_wait() {
             .write_response(&Response::with_headers(
                 ResponseCode::Continue,
                 [
-                    Header::SingleResponseMode(obex::srm::SingleResponseMode::Enable),
+                    Header::SingleResponseMode(obex_protocol::srm::SingleResponseMode::Enable),
                     Header::SingleResponseModeParameters(
-                        obex::srm::SingleResponseModeParameter::Wait,
+                        obex_protocol::srm::SingleResponseModeParameter::Wait,
                     ),
                 ],
             ))

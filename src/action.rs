@@ -25,7 +25,7 @@ impl From<ActionID> for u8 {
     ///
     /// # Examples
     /// ```
-    /// # use obex::action::ActionID;
+    /// # use obex_protocol::action::ActionID;
     /// assert_eq!(0x01, u8::from(ActionID::MoveRename));
     /// assert_eq!(0x80, u8::from(ActionID::Vendor(0x80)));
     /// ```
@@ -46,7 +46,7 @@ impl TryFrom<u8> for ActionID {
     ///
     /// # Examples
     /// ```
-    /// # use obex::action::ActionID;
+    /// # use obex_protocol::action::ActionID;
     /// assert_eq!(Ok(ActionID::Copy), ActionID::try_from(0x00));
     /// assert_eq!(Ok(ActionID::Vendor(0xF0)), ActionID::try_from(0xF0));
     /// assert!(ActionID::try_from(0x03).is_err());
@@ -88,7 +88,7 @@ pub struct ActionIDError;
 ///
 /// # Examples
 /// ```
-/// # use obex::action::Permissions;
+/// # use obex_protocol::action::Permissions;
 /// let permissions = Permissions {
 ///     user: Permissions::READ | Permissions::WRITE,
 ///     group: Permissions::READ,

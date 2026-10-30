@@ -40,7 +40,7 @@
 //!
 //! ### Async
 //!
-//! With the `tokio` feature, `obex::tokio` provides async versions of the client,
+//! With the `tokio` feature, `obex_protocol::tokio` provides async versions of the client,
 //! server, handler trait and packet stream for transports implementing tokio's
 //! `AsyncRead` and `AsyncWrite`. The blocking and async APIs run the same protocol
 //! engine, so they behave identically and interoperate freely.
@@ -63,9 +63,9 @@
 //!
 //! Pushing a vCard to a phone's inbox (OPP):
 //! ```no_run
-//! # fn example(socket: std::net::TcpStream) -> obex::Result<()> {
-//! use obex::client::Client;
-//! use obex::header::Header;
+//! # fn example(socket: std::net::TcpStream) -> obex_protocol::Result<()> {
+//! use obex_protocol::client::Client;
+//! use obex_protocol::header::Header;
 //!
 //! let mut client = Client::new(socket);
 //! client.connect([])?;

@@ -37,7 +37,7 @@ impl Opcode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::opcode::Opcode;
+    /// # use obex_protocol::opcode::Opcode;
     /// assert_eq!(0x02, Opcode::Put.value());
     /// assert_eq!(0x7F, Opcode::Abort.value());
     /// ```
@@ -71,7 +71,7 @@ impl Opcode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::opcode::Opcode;
+    /// # use obex_protocol::opcode::Opcode;
     /// assert_eq!(0x02, Opcode::Put.to_byte(false));
     /// assert_eq!(0x82, Opcode::Put.to_byte(true));
     /// assert_eq!(0x80, Opcode::Connect.to_byte(false));
@@ -92,7 +92,7 @@ impl Opcode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::opcode::Opcode;
+    /// # use obex_protocol::opcode::Opcode;
     /// assert_eq!(Ok((Opcode::Get, true)), Opcode::from_byte(0x83));
     /// assert_eq!(Ok((Opcode::Put, false)), Opcode::from_byte(0x02));
     /// assert_eq!(Ok((Opcode::Abort, true)), Opcode::from_byte(0xFF));
@@ -113,7 +113,7 @@ impl Opcode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::opcode::Opcode;
+    /// # use obex_protocol::opcode::Opcode;
     /// let data: [u8; 3] = [0x82, 0x00, 0x03];
     /// let (data, (opcode, is_final)) = Opcode::parse(&data).unwrap();
     ///
@@ -147,7 +147,7 @@ impl TryFrom<u8> for Opcode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::opcode::Opcode;
+    /// # use obex_protocol::opcode::Opcode;
     /// assert_eq!(Ok(Opcode::SetPath), Opcode::try_from(0x05));
     /// assert!(Opcode::try_from(0x04).is_err());
     /// ```

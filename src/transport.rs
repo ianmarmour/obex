@@ -27,14 +27,14 @@ use crate::packet::{Request, Response};
 ///
 /// # Examples
 /// ```
-/// # use obex::transport::PacketStream;
+/// # use obex_protocol::transport::PacketStream;
 /// // Two packets arriving in a single read are split apart.
 /// let bytes: &[u8] = &[0xA0, 0x00, 0x03, 0x90, 0x00, 0x03];
 /// let mut stream = PacketStream::new(bytes);
 ///
 /// assert_eq!(vec![0xA0, 0x00, 0x03], stream.read_packet().unwrap());
 /// assert_eq!(vec![0x90, 0x00, 0x03], stream.read_packet().unwrap());
-/// assert!(matches!(stream.read_packet(), Err(obex::Error::Disconnected)));
+/// assert!(matches!(stream.read_packet(), Err(obex_protocol::Error::Disconnected)));
 /// ```
 pub struct PacketStream<T> {
     inner: Framed<Blocking<T>>,

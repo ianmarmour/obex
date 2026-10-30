@@ -60,8 +60,8 @@ impl Realm {
 ///
 /// # Examples
 /// ```
-/// # use obex::auth::DigestChallenge;
-/// # use obex::header::Header;
+/// # use obex_protocol::auth::DigestChallenge;
+/// # use obex_protocol::header::Header;
 /// let challenge = DigestChallenge::with_nonce([7; 16]);
 /// let header: Header = challenge.clone().into();
 ///
@@ -165,7 +165,7 @@ impl DigestChallenge {
     ///
     /// # Examples
     /// ```
-    /// # use obex::auth::{Credentials, DigestChallenge};
+    /// # use obex_protocol::auth::{Credentials, DigestChallenge};
     /// let challenge = DigestChallenge::new();
     /// let response = challenge.respond(&Credentials::new("1234"));
     ///
@@ -330,7 +330,7 @@ impl Credentials {
 ///
 /// # Examples
 /// ```
-/// # use obex::auth::request_digest;
+/// # use obex_protocol::auth::request_digest;
 /// assert_eq!(request_digest(b"nonce", b"secret"), request_digest(b"nonce", b"secret"));
 /// assert_ne!(request_digest(b"nonce", b"secret"), request_digest(b"nonce", b"other"));
 /// ```

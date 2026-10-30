@@ -25,12 +25,12 @@
 //! # async fn example(
 //! #     mas_socket: tokio::net::TcpStream,
 //! #     mns_socket: tokio::net::TcpStream,
-//! # ) -> obex::Result<()> {
-//! use obex::header::Header;
-//! use obex::packet::{Request, Response};
-//! use obex::response::ResponseCode;
-//! use obex::target::MESSAGE_ACCESS;
-//! use obex::tokio::{Client, Handler, Server};
+//! # ) -> obex_protocol::Result<()> {
+//! use obex_protocol::header::Header;
+//! use obex_protocol::packet::{Request, Response};
+//! use obex_protocol::response::ResponseCode;
+//! use obex_protocol::target::MESSAGE_ACCESS;
+//! use obex_protocol::tokio::{Client, Handler, Server};
 //!
 //! struct Notifications;
 //!

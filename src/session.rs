@@ -46,7 +46,7 @@ impl TryFrom<u8> for SessionOpcode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::session::SessionOpcode;
+    /// # use obex_protocol::session::SessionOpcode;
     /// assert_eq!(Ok(SessionOpcode::ResumeSession), SessionOpcode::try_from(0x03));
     /// assert!(SessionOpcode::try_from(0x05).is_err());
     /// ```
@@ -166,8 +166,8 @@ impl From<&SessionParameter> for TagLengthValue {
     ///
     /// # Examples
     /// ```
-    /// # use obex::session::{SessionParameter, SessionOpcode};
-    /// # use obex::tlv::TagLengthValue;
+    /// # use obex_protocol::session::{SessionParameter, SessionOpcode};
+    /// # use obex_protocol::tlv::TagLengthValue;
     /// let tlv = TagLengthValue::from(&SessionParameter::SessionOpcode(SessionOpcode::SuspendSession));
     ///
     /// assert_eq!(TagLengthValue::new(0x05, [0x02]), tlv);
@@ -198,8 +198,8 @@ impl TryFrom<&TagLengthValue> for SessionParameter {
     ///
     /// # Examples
     /// ```
-    /// # use obex::session::SessionParameter;
-    /// # use obex::tlv::TagLengthValue;
+    /// # use obex_protocol::session::SessionParameter;
+    /// # use obex_protocol::tlv::TagLengthValue;
     /// let parameter = SessionParameter::try_from(&TagLengthValue::new(0x04, [0, 0, 0, 30])).unwrap();
     ///
     /// assert_eq!(SessionParameter::Timeout(30), parameter);
@@ -246,8 +246,8 @@ pub struct SessionParameterError;
 ///
 /// Creating a session over Bluetooth:
 /// ```
-/// # use obex::header::Header;
-/// # use obex::session::{SessionParameters, SessionParameter, SessionOpcode};
+/// # use obex_protocol::header::Header;
+/// # use obex_protocol::session::{SessionParameters, SessionParameter, SessionOpcode};
 /// let parameters = SessionParameters::command(SessionOpcode::CreateSession)
 ///     .with(SessionParameter::DeviceAddress(vec![0x00, 0x1A, 0x7D, 0xDA, 0x71, 0x13]))
 ///     .with(SessionParameter::Nonce(vec![1, 2, 3, 4]));
@@ -326,7 +326,7 @@ impl From<SessionParameters> for Header {
 ///
 /// # Examples
 /// ```
-/// # use obex::session::session_id;
+/// # use obex_protocol::session::session_id;
 /// let id = session_id(&[1, 2, 3, 4, 5, 6], &[9, 9, 9, 9], &[6, 5, 4, 3, 2, 1], &[7, 7, 7, 7]);
 ///
 /// assert_eq!(16, id.len());

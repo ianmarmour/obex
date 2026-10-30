@@ -25,7 +25,7 @@ impl From<SingleResponseMode> for u8 {
     ///
     /// # Examples
     /// ```
-    /// # use obex::srm::SingleResponseMode;
+    /// # use obex_protocol::srm::SingleResponseMode;
     /// let data: u8 = SingleResponseMode::Enable.into();
     ///
     /// assert_eq!(0x01, data);
@@ -42,7 +42,7 @@ impl TryFrom<u8> for SingleResponseMode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::srm::SingleResponseMode;
+    /// # use obex_protocol::srm::SingleResponseMode;
     /// assert_eq!(Ok(SingleResponseMode::Supported), SingleResponseMode::try_from(0x02));
     /// assert!(SingleResponseMode::try_from(0x03).is_err());
     /// ```
@@ -132,7 +132,7 @@ impl TryFrom<u8> for SingleResponseModeParameter {
     ///
     /// # Examples
     /// ```
-    /// # use obex::srm::SingleResponseModeParameter;
+    /// # use obex_protocol::srm::SingleResponseModeParameter;
     /// let parameter = SingleResponseModeParameter::try_from(0x01).unwrap();
     ///
     /// assert!(parameter.requests_wait());

@@ -15,28 +15,28 @@ OBEX is to small devices what HTTP is to the web: a request/response protocol fo
 This library is a building block. It implements OBEX itself, complete and transport independent, and stays out of profile specifics so that profile crates can be thin layers on top of it:
 
 ```text
-+----------------------------------------------------------+
-|  Profiles: MAP, PBAP, FTP, OPP, BIP, SYNC ...            |  your crates
-+----------------------------------------------------------+
-|  obex::client / obex::server   (blocking)                |  protocol engines
-|  obex::tokio::{Client, Server} (async, `tokio` feature)  |
-|  obex::header  obex::packet  obex::auth  obex::srm  ...  |  codec (no I/O)
-+----------------------------------------------------------+
-|  RFCOMM (GOEP 1.x)   L2CAP ERTM (GOEP 2.x)   TCP :650    |  any Read + Write
-+----------------------------------------------------------+
++-----------------------------------------------------------+
+|  Profiles: MAP, PBAP, FTP, OPP, BIP, SYNC ...             |  your crates
++-----------------------------------------------------------+
+|  client / server                 (blocking)               |  protocol engines
+|  tokio::{Client, Server}         (async, `tokio` feature) |
+|  header  packet  auth  srm  ...                           |  codec (no I/O)
++-----------------------------------------------------------+
+|  RFCOMM (GOEP 1.x)   L2CAP ERTM (GOEP 2.x)   TCP :650     |  any Read + Write
++-----------------------------------------------------------+
 ```
 
 * **Codec** (`header`, `packet`, `opcode`, `response`, `tlv`, `auth`, `srm`, `session`, `action`, `target`): every header, opcode and response code in the specification, plus user defined headers. These types only convert between packets and bytes, so they work with blocking, async or embedded I/O.
 * **Client**: CONNECT, DISCONNECT, PUT (streaming), GET (streaming), SETPATH, ACTION (copy, move, permissions), SESSION and ABORT.
 * **Server**: a `Handler` trait receives complete operations; the server does the packet work. You need this for the profile roles where your device is the one being connected to, such as the MAP Message Notification Server.
 * **Transport framing** for both stream sockets (RFCOMM, TCP) and sequenced packet sockets (L2CAP `SOCK_SEQPACKET`).
-* **Async** (optional `tokio` feature): `obex::tokio` has async versions of the client, server, handler and packet stream. The blocking and async APIs run the same protocol engine, so they behave identically and can talk to each other.
+* **Async** (optional `tokio` feature): `obex_protocol::tokio` has async versions of the client, server, handler and packet stream. The blocking and async APIs run the same protocol engine, so they behave identically and can talk to each other.
 
 Both engines handle packet size negotiation, multi-packet requests and responses, directed connections (Target, Who and Connection Id), Single Response Mode, digest authentication and ABORT.
 
 ## How Do I Use This Library
 
-The crate is published as `obex-protocol` (the `obex` name was taken) and imported as `obex`:
+The crate is published as `obex-protocol` (the `obex` name was taken) and imported as `obex_protocol`:
 
 ```toml
 [dependencies]
@@ -48,9 +48,9 @@ Open a socket with your Bluetooth stack (BlueZ, `bluer`, or the platform APIs; f
 ### Client
 
 ```rust
-use obex::client::Client;
-use obex::header::Header;
-use obex::target::FOLDER_BROWSING;
+use obex_protocol::client::Client;
+use obex_protocol::header::Header;
+use obex_protocol::target::FOLDER_BROWSING;
 
 let mut client = Client::new(socket);
 client.connect([Header::Target(FOLDER_BROWSING.to_vec())])?;
@@ -69,9 +69,9 @@ Large objects can be streamed with `Client::put_from` (any `Read`) and `Client::
 ### Server
 
 ```rust
-use obex::packet::{Request, Response};
-use obex::response::ResponseCode;
-use obex::server::{Handler, Object, Server};
+use obex_protocol::packet::{Request, Response};
+use obex_protocol::response::ResponseCode;
+use obex_protocol::server::{Handler, Object, Server};
 
 struct Inbox;
 
@@ -92,9 +92,9 @@ Server::new(socket, Inbox).run()?;
 ### Codec only
 
 ```rust
-use obex::header::Header;
-use obex::opcode::Opcode;
-use obex::packet::{Request, Response};
+use obex_protocol::header::Header;
+use obex_protocol::opcode::Opcode;
+use obex_protocol::packet::{Request, Response};
 
 let bytes = Request::new(Opcode::Get, true, [Header::Name("pb.vcf".to_string())]).to_bytes()?;
 let (_, response) = Response::parse(&incoming)?;
@@ -112,10 +112,10 @@ obex-protocol = { version = "0.1", features = ["tokio"] }
 The API mirrors the blocking one, with `.await` and `async fn` handlers. It works with any `AsyncRead + AsyncWrite` transport, such as `bluer`'s RFCOMM and L2CAP streams. Client, server and handler futures are `Send`, so they can be spawned on a multi-threaded runtime.
 
 ```rust
-use obex::header::Header;
-use obex::packet::{Request, Response};
-use obex::response::ResponseCode;
-use obex::tokio::{Client, Handler, Server};
+use obex_protocol::header::Header;
+use obex_protocol::packet::{Request, Response};
+use obex_protocol::response::ResponseCode;
+use obex_protocol::tokio::{Client, Handler, Server};
 
 struct Notifications;
 
@@ -134,13 +134,15 @@ let object = client.get([Header::Name("inbox".to_string())]).await?;
 
 ## Building a Profile on Top
 
+Profile crates built on this one form a family named `obex-protocol-<profile>`. For example, [`obex-protocol-map`](https://github.com/ianmarmour/map) implements the Bluetooth Message Access Profile and is imported as `obex_protocol_map`.
+
 Profiles choose a Target, then send Names, Types and Application Parameters. A Message Access Profile client, for example, is mostly constants:
 
 ```rust
-use obex::client::Client;
-use obex::header::Header;
-use obex::target::MESSAGE_ACCESS;
-use obex::tlv::ApplicationParameters;
+use obex_protocol::client::Client;
+use obex_protocol::header::Header;
+use obex_protocol::target::MESSAGE_ACCESS;
+use obex_protocol::tlv::ApplicationParameters;
 
 const MAX_LIST_COUNT: u8 = 0x01;
 const LISTING_SIZE: u8 = 0x12;
@@ -162,7 +164,7 @@ let listing = mas.get([
 let size = listing.headers.application_parameters().and_then(|p| p.get_u16(LISTING_SIZE));
 ```
 
-The other half of MAP, the Message Notification Server, is a `Handler` that accepts `x-bt/MAP-event-report` PUTs. The server answers its directed CONNECT (Target `MESSAGE_NOTIFICATION`) with a Who header and Connection Id automatically. `obex::target` has the Target UUIDs for FTP, PBAP, MAP MAS and MAP MNS.
+The other half of MAP, the Message Notification Server, is a `Handler` that accepts `x-bt/MAP-event-report` PUTs. The server answers its directed CONNECT (Target `MESSAGE_NOTIFICATION`) with a Who header and Connection Id automatically. `obex_protocol::target` has the Target UUIDs for FTP, PBAP, MAP MAS and MAP MNS.
 
 ## Bluetooth Notes
 
