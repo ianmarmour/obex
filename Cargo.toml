@@ -3,13 +3,13 @@ name = "obex"
 version = "0.0.1"
 authors = ["Ian Armour <ianmarmour@gmail.com>"]
 description = """
-Native OBEX 1.4 Implementation in Rust
+Native OBEX 1.5 (IrDA Object Exchange) implementation in Rust, usable over Bluetooth RFCOMM/L2CAP, IrDA or TCP.
 """
 edition = "2021"
 readme = "README.md"
 repository = "https://github.com/ianmarmour/obex"
 license = "MIT"
-keywords = ["obex", "bluetooth", "irda"]
+keywords = ["obex", "bluetooth", "irda", "goep"]
 categories = ["encoding", "network-programming"]
 
 [lib]
@@ -17,4 +17,6 @@ path = "src/lib.rs"
 
 [dependencies]
 nom = "7.1.1"
-ascii = "1.1"
+
+[dev-dependencies]
+libc = "0.2"
