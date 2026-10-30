@@ -11,43 +11,81 @@ use crate::opcode::FINAL_BIT;
 /// The `ResponseCode` type. See [the module level documentation](index.html) for more.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum ResponseCode {
+    /// Continue the operation (HTTP 100).
     Continue = 0x10,
+    /// OK, success (HTTP 200).
     Success = 0x20,
+    /// Created (HTTP 201).
     Created = 0x21,
+    /// Accepted (HTTP 202).
     Accepted = 0x22,
+    /// Non-Authoritative Information (HTTP 203).
     NonAuthoritativeInformation = 0x23,
+    /// No Content (HTTP 204).
     NoContent = 0x24,
+    /// Reset Content (HTTP 205).
     ResetContent = 0x25,
+    /// Partial Content (HTTP 206).
     PartialContent = 0x26,
+    /// Multiple Choices (HTTP 300).
     MultipleChoices = 0x30,
+    /// Moved Permanently (HTTP 301).
     MovedPermanently = 0x31,
+    /// Moved Temporarily (HTTP 302).
     MovedTemporarily = 0x32,
+    /// See Other (HTTP 303).
     SeeOther = 0x33,
+    /// Not Modified (HTTP 304).
     NotModified = 0x34,
+    /// Use Proxy (HTTP 305).
     UseProxy = 0x35,
+    /// Bad Request, the server couldn't understand the request (HTTP 400).
     BadRequest = 0x40,
+    /// Unauthorized, authentication is required (HTTP 401).
     Unauthorized = 0x41,
+    /// Payment Required (HTTP 402).
     PaymentRequired = 0x42,
+    /// Forbidden, the operation is understood but refused (HTTP 403).
     Forbidden = 0x43,
+    /// Not Found (HTTP 404).
     NotFound = 0x44,
+    /// Method Not Allowed (HTTP 405).
     MethodNotAllowed = 0x45,
+    /// Not Acceptable (HTTP 406).
     NotAcceptable = 0x46,
+    /// Proxy Authentication Required (HTTP 407).
     ProxyAuthenticationRequired = 0x47,
+    /// Request Time Out (HTTP 408).
     RequestTimeOut = 0x48,
+    /// Conflict (HTTP 409).
     Conflict = 0x49,
+    /// Gone (HTTP 410).
     Gone = 0x4A,
+    /// Length Required (HTTP 411).
     LengthRequired = 0x4B,
+    /// Precondition Failed (HTTP 412).
     PreconditionFailed = 0x4C,
+    /// Requested Entity Too Large (HTTP 413).
     RequestedEntityTooLarge = 0x4D,
+    /// Request URL Too Large (HTTP 414).
     RequestURLTooLarge = 0x4E,
+    /// Unsupported Media Type (HTTP 415).
     UnsupportedMediaType = 0x4F,
+    /// Internal Server Error (HTTP 500).
     InternalServerError = 0x50,
+    /// Not Implemented (HTTP 501).
     NotImplemented = 0x51,
+    /// Bad Gateway (HTTP 502).
     BadGateway = 0x52,
+    /// Service Unavailable, also used for unknown Connection Ids (HTTP 503).
     ServiceUnavailable = 0x53,
+    /// Gateway Timeout (HTTP 504).
     GatewayTimeout = 0x54,
+    /// HTTP Version Not Supported (HTTP 505).
     HTTPVersionNotSupported = 0x55,
+    /// Database Full; no HTTP equivalent.
     DatabaseFull = 0x60,
+    /// Database Locked; no HTTP equivalent.
     DatabaseLocked = 0x61,
 }
 
@@ -176,5 +214,6 @@ impl TryFrom<u8> for ResponseCode {
     }
 }
 
+/// The error returned when a byte is not a valid `ResponseCode`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ResponseCodeError;

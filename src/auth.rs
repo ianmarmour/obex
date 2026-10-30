@@ -40,7 +40,9 @@ pub const MAXIMUM_USER_ID_LENGTH: usize = 20;
 /// 1 to 9 are ISO-8859-1 to ISO-8859-9 and 0xFF is UTF-16.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Realm {
+    /// The IrLMP character set code of `value`.
     pub charset: u8,
+    /// The realm text in that character set.
     pub value: Vec<u8>,
 }
 
@@ -71,11 +73,13 @@ impl Realm {
 /// ```
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DigestChallenge {
+    /// The random value the responder hashes with the password.
     pub nonce: [u8; 16],
     /// The responder must include a User Id in its digest-response.
     pub user_id_required: bool,
     /// The access offered by the challenger is read only.
     pub read_only: bool,
+    /// Tells the user which User Id and password to use.
     pub realm: Option<Realm>,
 }
 
@@ -205,7 +209,9 @@ impl From<DigestChallenge> for Header {
 /// The digest-response carried by an Authenticate Response header.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DigestResponse {
+    /// `MD5(nonce ":" password)`.
     pub request_digest: [u8; 16],
+    /// The User Id, required when the challenge asked for one.
     pub user_id: Option<Vec<u8>>,
     /// The nonce of the challenge being answered, when several were sent.
     pub nonce: Option<[u8; 16]>,

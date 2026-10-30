@@ -167,5 +167,6 @@ impl TryFrom<u8> for Opcode {
     }
 }
 
+/// The error returned when a byte is not a valid `Opcode`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct OpcodeError;

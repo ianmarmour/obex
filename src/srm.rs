@@ -71,6 +71,7 @@ impl SingleResponseMode {
     }
 }
 
+/// The error returned when a byte is not a valid `SingleResponseMode`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SingleResponseModeError;
 
@@ -147,5 +148,6 @@ impl TryFrom<u8> for SingleResponseModeParameter {
     }
 }
 
+/// The error returned when a byte is not a valid `SingleResponseModeParameter`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SingleResponseModeParameterError;

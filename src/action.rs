@@ -77,6 +77,7 @@ impl ActionID {
     }
 }
 
+/// The error returned when a byte is not a valid `ActionID`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ActionIDError;
 
@@ -99,15 +100,22 @@ pub struct ActionIDError;
 /// ```
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub struct Permissions {
+    /// Permissions of the OBEX client's authenticated user, or a guest.
     pub user: u8,
+    /// Permissions of the groups the server assigned to the user.
     pub group: u8,
+    /// Permissions of everyone else.
     pub other: u8,
 }
 
 impl Permissions {
+    /// The object may be read with GET or copied; folders may be entered with SETPATH.
     pub const READ: u8 = 0x01;
+    /// The object may be written with PUT.
     pub const WRITE: u8 = 0x02;
+    /// The object may be deleted with PUT.
     pub const DELETE: u8 = 0x04;
+    /// The permissions of the object may be changed with ACTION.
     pub const MODIFY: u8 = 0x80;
 }
 

@@ -65,7 +65,9 @@ use crate::transport::PacketStream;
 
 /// The body of an object returned from [`Handler::get`].
 pub enum Body {
+    /// A body held in memory.
     Bytes(Vec<u8>),
+    /// A body streamed from a reader, packet by packet.
     Reader(Box<dyn Read>),
 }
 

@@ -73,6 +73,8 @@
 //! # }
 //! ```
 //!
+#![warn(missing_docs)]
+
 pub mod action;
 pub mod auth;
 pub mod client;

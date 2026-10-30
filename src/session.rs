@@ -21,10 +21,15 @@ pub const INFINITE_TIMEOUT: u32 = 0xFFFF_FFFF;
 /// Session commands, sent in the Session Opcode parameter.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SessionOpcode {
+    /// Create a new session.
     CreateSession = 0x00,
+    /// Close an active or suspended session.
     CloseSession = 0x01,
+    /// Suspend the active session.
     SuspendSession = 0x02,
+    /// Resume a suspended session.
     ResumeSession = 0x03,
+    /// Negotiate the timeout of a suspended session.
     SetTimeout = 0x04,
 }
 
@@ -72,18 +77,26 @@ impl SessionOpcode {
     }
 }
 
+/// The error returned when a byte is not a valid `SessionOpcode`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SessionOpcodeError;
 
 /// Tags of the Session-Parameters header.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SessionParameterTag {
+    /// The device address of the sender.
     DeviceAddress = 0x00,
+    /// A unique value used to create the session id.
     Nonce = 0x01,
+    /// The 16 byte session id.
     SessionID = 0x02,
+    /// The next sequence number expected when the session is resumed.
     NextSequenceNumber = 0x03,
+    /// Seconds a suspended session is kept.
     Timeout = 0x04,
+    /// The session command, always the first triplet of a request.
     SessionOpcode = 0x05,
+    /// Number of object body bytes received so far.
     ObjectOffset = 0x06,
 }
 
@@ -110,6 +123,7 @@ impl TryFrom<u8> for SessionParameterTag {
     }
 }
 
+/// The error returned when a byte is not a valid `SessionParameterTag`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SessionParameterTagError;
 
@@ -222,6 +236,7 @@ impl TryFrom<&TagLengthValue> for SessionParameter {
     }
 }
 
+/// The error returned when a triplet is not a valid `SessionParameter`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SessionParameterError;
 

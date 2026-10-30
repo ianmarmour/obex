@@ -21,14 +21,27 @@ pub enum Error {
     Malformed(nom::error::ErrorKind),
     /// A header is larger than a single OBEX packet can carry.
     HeaderTooLarge {
+        /// The header identifier.
         id: u8,
+        /// The encoded length of the header.
         length: usize,
+        /// The largest header that fits.
         maximum: usize,
     },
     /// A packet is larger than the negotiated maximum OBEX packet length.
-    PacketTooLarge { length: usize, maximum: usize },
+    PacketTooLarge {
+        /// The encoded length of the packet.
+        length: usize,
+        /// The largest packet the receiver accepts.
+        maximum: usize,
+    },
     /// A tag-length-value triplet carries more than 255 bytes.
-    ValueTooLarge { tag: u8, length: usize },
+    ValueTooLarge {
+        /// The tag of the triplet.
+        tag: u8,
+        /// The length of its value.
+        length: usize,
+    },
     /// The remote device answered with a response code that is not a success code.
     Response(Box<Response>),
     /// The remote device violated the OBEX protocol.

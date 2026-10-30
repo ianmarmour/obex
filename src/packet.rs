@@ -120,6 +120,7 @@ impl From<u8> for SetPathFlags {
 /// An OBEX request packet.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Request {
+    /// The operation this packet belongs to.
     pub opcode: Opcode,
     /// The Final bit; always encoded as set for opcodes that require it.
     pub is_final: bool,
@@ -127,6 +128,7 @@ pub struct Request {
     pub connect: Option<ConnectParameters>,
     /// Present for SETPATH requests; defaults are used when encoding one without it.
     pub set_path: Option<SetPathFlags>,
+    /// The headers carried by this packet.
     pub headers: Headers,
 }
 
@@ -279,11 +281,13 @@ impl Request {
 /// An OBEX response packet.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Response {
+    /// The outcome of the request.
     pub code: ResponseCode,
     /// The Final bit; OBEX responses always set it.
     pub is_final: bool,
     /// Present for responses to CONNECT requests.
     pub connect: Option<ConnectParameters>,
+    /// The headers carried by this packet.
     pub headers: Headers,
 }
 

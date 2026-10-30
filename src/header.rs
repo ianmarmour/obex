@@ -72,31 +72,57 @@ impl From<u8> for HeaderEncoding {
 /// Header identifiers defined by the OBEX specification.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum HeaderID {
+    /// Number of objects (used by Connect).
     Count = 0xC0,
+    /// Name of the object, often a file name.
     Name = 0x01,
+    /// Type of the object as a MIME type.
     Type = 0x42,
+    /// Length of the object in bytes.
     Length = 0xC3,
+    /// ISO 8601 date/time stamp, the preferred form.
     Time = 0x44,
+    /// 4 byte date/time stamp, for compatibility only.
     LegacyTime = 0xC4,
+    /// Text description of the object or response.
     Description = 0x05,
+    /// Name of the service the operation is targeted to.
     Target = 0x46,
+    /// An HTTP 1.x header.
     HTTP = 0x47,
+    /// A chunk of the object body.
     Body = 0x48,
+    /// The final chunk of the object body.
     EndOfBody = 0x49,
+    /// Identifies the OBEX application, used to tell if talking to a peer.
     Who = 0x4A,
+    /// Identifier used for OBEX connection multiplexing.
     ConnectionID = 0xCB,
+    /// Extended application request and response information.
     ApplicationParameters = 0x4C,
+    /// Authentication digest-challenge.
     AuthenticateChallenge = 0x4D,
+    /// Authentication digest-response.
     AuthenticateResponse = 0x4E,
+    /// Creator of the object.
     CreatorID = 0xCF,
+    /// Uniquely identifies the network client (OBEX server).
     WANUUID = 0x50,
+    /// OBEX object class of the object.
     ObjectClass = 0x51,
+    /// Parameters used in session commands and responses.
     SessionParameters = 0x52,
+    /// Sequence number used in each packet of a reliable session.
     SessionSequenceNumber = 0x93,
+    /// The action performed by an ACTION operation.
     ActionID = 0x94,
+    /// Destination object name used by ACTION operations.
     DestName = 0x15,
+    /// 4 byte bit mask for setting permissions.
     Permissions = 0xD6,
+    /// 1 byte value to set up Single Response Mode.
     SingleResponseMode = 0x97,
+    /// 1 byte value for Single Response Mode parameters.
     SingleResponseModeParameters = 0x98,
 }
 
@@ -189,15 +215,20 @@ impl HeaderID {
     }
 }
 
+/// The error returned when a byte is not a valid `HeaderID`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct HeaderIDError;
 
 /// A header value decoded only by its encoding, used for user defined and unknown headers.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum HeaderValue {
+    /// Null terminated UTF-16BE text, high bits `00`.
     Unicode(String),
+    /// A byte sequence, high bits `01`.
     Bytes(Vec<u8>),
+    /// A single byte, high bits `10`.
     U8(u8),
+    /// A 4 byte big-endian integer, high bits `11`.
     U32(u32),
 }
 
@@ -257,7 +288,12 @@ pub enum Header {
     /// Single Response Mode parameters.
     SingleResponseModeParameters(SingleResponseModeParameter),
     /// A user defined or otherwise unrecognized header.
-    Other { id: u8, value: HeaderValue },
+    Other {
+        /// The header identifier, whose high bits select the encoding.
+        id: u8,
+        /// The header value.
+        value: HeaderValue,
+    },
 }
 
 /// A borrowed view of a header value used for sizing and encoding.

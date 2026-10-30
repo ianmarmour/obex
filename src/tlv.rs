@@ -22,7 +22,9 @@ use crate::error::{Error, Result};
 /// The `TagLengthValue` type. See [the module level documentation](index.html) for more.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TagLengthValue {
+    /// The tag, meaningful only to the application or profile using it.
     pub tag: u8,
+    /// The value, at most 255 bytes.
     pub value: Vec<u8>,
 }
 
