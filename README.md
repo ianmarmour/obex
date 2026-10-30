@@ -1,6 +1,6 @@
 # obex-protocol
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![CI](https://github.com/ianmarmour/obex/workflows/CI/badge.svg)](https://github.com/ianmarmour/obex/actions/workflows/ci.yml)
+[![CI](https://github.com/ianmarmour/obex-protocol/workflows/CI/badge.svg)](https://github.com/ianmarmour/obex-protocol/actions/workflows/ci.yml)
 
 A native IrDA Object Exchange (OBEX 1.5) protocol library for Rust, with minimal dependencies.
 
