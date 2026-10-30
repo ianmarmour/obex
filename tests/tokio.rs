@@ -6,13 +6,13 @@ use std::io;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use obex::auth::{Credentials, DigestChallenge};
-use obex::header::Header;
-use obex::packet::{Request, Response};
-use obex::response::ResponseCode;
-use obex::target::{FOLDER_BROWSING, MESSAGE_ACCESS};
-use obex::tokio::{Authentication, Client, Handler, Object, PacketStream, Server};
-use obex::Error;
+use obex_protocol::auth::{Credentials, DigestChallenge};
+use obex_protocol::header::Header;
+use obex_protocol::packet::{Request, Response};
+use obex_protocol::response::ResponseCode;
+use obex_protocol::target::{FOLDER_BROWSING, MESSAGE_ACCESS};
+use obex_protocol::tokio::{Authentication, Client, Handler, Object, PacketStream, Server};
+use obex_protocol::Error;
 use tokio::io::{duplex, AsyncRead, AsyncWrite, DuplexStream, ReadBuf};
 
 #[derive(Default)]
@@ -345,10 +345,10 @@ async fn async_client_with_blocking_server() {
     let (client_socket, server_socket) = std::os::unix::net::UnixStream::pair().unwrap();
 
     struct Echo;
-    impl obex::server::Handler for Echo {
-        fn get(&mut self, request: &Request) -> Result<obex::server::Object, Response> {
+    impl obex_protocol::server::Handler for Echo {
+        fn get(&mut self, request: &Request) -> Result<obex_protocol::server::Object, Response> {
             let name = request.headers.name().unwrap_or_default().to_string();
-            Ok(obex::server::Object::new(
+            Ok(obex_protocol::server::Object::new(
                 [],
                 name.repeat(1000).into_bytes(),
             ))
@@ -356,7 +356,7 @@ async fn async_client_with_blocking_server() {
     }
 
     let server = std::thread::spawn(move || {
-        obex::server::Server::new(server_socket, Echo)
+        obex_protocol::server::Server::new(server_socket, Echo)
             .with_single_response_mode(true)
             .run()
             .unwrap();
@@ -396,7 +396,7 @@ async fn blocking_client_with_async_server_over_tcp() {
     let uploaded = body.clone();
     tokio::task::spawn_blocking(move || {
         let socket = std::net::TcpStream::connect(address).unwrap();
-        let mut client = obex::client::Client::new(socket);
+        let mut client = obex_protocol::client::Client::new(socket);
         client.connect([]).unwrap();
         client
             .put([Header::Name("tcp.bin".to_string())], &uploaded)
@@ -420,7 +420,7 @@ async fn scripted_exchange_with_packet_stream() {
         assert!(connect.connect.is_some());
 
         let response = Response {
-            connect: Some(obex::packet::ConnectParameters::new(4096)),
+            connect: Some(obex_protocol::packet::ConnectParameters::new(4096)),
             ..Response::with_headers(ResponseCode::Success, [Header::ConnectionID(7)])
         };
         stream.write_response(&response).await.unwrap();

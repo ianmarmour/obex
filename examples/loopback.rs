@@ -11,12 +11,12 @@ use std::collections::HashMap;
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 
-use obex::client::Client;
-use obex::header::Header;
-use obex::packet::{Request, Response};
-use obex::response::ResponseCode;
-use obex::server::{Handler, Object, Server};
-use obex::target::FOLDER_BROWSING;
+use obex_protocol::client::Client;
+use obex_protocol::header::Header;
+use obex_protocol::packet::{Request, Response};
+use obex_protocol::response::ResponseCode;
+use obex_protocol::server::{Handler, Object, Server};
+use obex_protocol::target::FOLDER_BROWSING;
 
 #[derive(Default)]
 struct Folder {
@@ -63,11 +63,11 @@ impl Handler for Folder {
     }
 }
 
-fn main() -> obex::Result<()> {
+fn main() -> obex_protocol::Result<()> {
     let listener = TcpListener::bind("127.0.0.1:0")?;
     let address = listener.local_addr()?;
 
-    let server = thread::spawn(move || -> obex::Result<()> {
+    let server = thread::spawn(move || -> obex_protocol::Result<()> {
         let (socket, peer) = listener.accept()?;
         println!("server: connection from {}", peer);
         Server::new(socket, Folder::default()).run()

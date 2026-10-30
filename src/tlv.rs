@@ -46,7 +46,7 @@ impl TagLengthValue {
     ///
     /// # Examples
     /// ```
-    /// # use obex::tlv::TagLengthValue;
+    /// # use obex_protocol::tlv::TagLengthValue;
     /// let mut bytes: Vec<u8> = Vec::new();
     /// TagLengthValue::new(0x01, [0x00, 0x0A]).encode(&mut bytes).unwrap();
     ///
@@ -73,7 +73,7 @@ impl TagLengthValue {
     ///
     /// # Examples
     /// ```
-    /// # use obex::tlv::TagLengthValue;
+    /// # use obex_protocol::tlv::TagLengthValue;
     /// let data: [u8; 5] = [0x01, 0x02, 0x00, 0x0A, 0xFF];
     /// let (rest, tlv) = TagLengthValue::parse(&data).unwrap();
     ///
@@ -98,7 +98,7 @@ impl TagLengthValue {
     ///
     /// # Examples
     /// ```
-    /// # use obex::tlv::TagLengthValue;
+    /// # use obex_protocol::tlv::TagLengthValue;
     /// assert_eq!(Some(0x0102), TagLengthValue::new(0, [0x01, 0x02]).as_uint());
     /// assert_eq!(None, TagLengthValue::new(0, [0u8; 9]).as_uint());
     /// ```
@@ -143,7 +143,7 @@ pub(crate) fn encode_all(tlvs: &[TagLengthValue], buf: &mut Vec<u8>) -> Result<(
 ///
 /// Building the parameters for a MAP `GetMessagesListing` request:
 /// ```
-/// # use obex::tlv::ApplicationParameters;
+/// # use obex_protocol::tlv::ApplicationParameters;
 /// const MAX_LIST_COUNT: u8 = 0x01;
 /// const SUBJECT_LENGTH: u8 = 0x13;
 ///

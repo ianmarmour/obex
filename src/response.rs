@@ -94,7 +94,7 @@ impl ResponseCode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::response::ResponseCode;
+    /// # use obex_protocol::response::ResponseCode;
     /// assert!(ResponseCode::Success.is_success());
     /// assert!(ResponseCode::PartialContent.is_success());
     /// assert!(!ResponseCode::Continue.is_success());
@@ -108,7 +108,7 @@ impl ResponseCode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::response::ResponseCode;
+    /// # use obex_protocol::response::ResponseCode;
     /// assert_eq!(0xA0, ResponseCode::Success.to_byte(true));
     /// assert_eq!(0x90, ResponseCode::Continue.to_byte(true));
     /// ```
@@ -124,7 +124,7 @@ impl ResponseCode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::response::ResponseCode;
+    /// # use obex_protocol::response::ResponseCode;
     /// let data: [u8; 3] = [0xA0, 0x00, 0x03];
     /// let (data, (code, is_final)) = ResponseCode::parse(&data).unwrap();
     ///
@@ -149,7 +149,7 @@ impl From<ResponseCode> for u8 {
     ///
     /// # Examples
     /// ```
-    /// # use obex::response::ResponseCode;
+    /// # use obex_protocol::response::ResponseCode;
     /// assert_eq!(0x53, u8::from(ResponseCode::ServiceUnavailable));
     /// ```
     fn from(original: ResponseCode) -> u8 {
@@ -164,7 +164,7 @@ impl TryFrom<u8> for ResponseCode {
     ///
     /// # Examples
     /// ```
-    /// # use obex::response::ResponseCode;
+    /// # use obex_protocol::response::ResponseCode;
     /// assert_eq!(Ok(ResponseCode::Forbidden), ResponseCode::try_from(0xC3));
     /// assert_eq!(Ok(ResponseCode::Forbidden), ResponseCode::try_from(0x43));
     /// assert!(ResponseCode::try_from(0x00).is_err());

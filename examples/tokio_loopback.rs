@@ -6,11 +6,11 @@
 
 use std::collections::HashMap;
 
-use obex::header::Header;
-use obex::packet::{Request, Response};
-use obex::response::ResponseCode;
-use obex::target::FOLDER_BROWSING;
-use obex::tokio::{Client, Handler, Object, Server};
+use obex_protocol::header::Header;
+use obex_protocol::packet::{Request, Response};
+use obex_protocol::response::ResponseCode;
+use obex_protocol::target::FOLDER_BROWSING;
+use obex_protocol::tokio::{Client, Handler, Object, Server};
 use tokio::net::{TcpListener, TcpStream};
 
 #[derive(Default)]
@@ -44,7 +44,7 @@ impl Handler for Folder {
 }
 
 #[tokio::main]
-async fn main() -> obex::Result<()> {
+async fn main() -> obex_protocol::Result<()> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let address = listener.local_addr()?;
 

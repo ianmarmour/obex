@@ -24,11 +24,11 @@
 //!
 //! A minimal MAP Message Notification Server that accepts event reports:
 //! ```no_run
-//! # fn example(socket: std::net::TcpStream) -> obex::Result<()> {
-//! use obex::header::Header;
-//! use obex::packet::{Request, Response};
-//! use obex::response::ResponseCode;
-//! use obex::server::{Handler, Server};
+//! # fn example(socket: std::net::TcpStream) -> obex_protocol::Result<()> {
+//! use obex_protocol::header::Header;
+//! use obex_protocol::packet::{Request, Response};
+//! use obex_protocol::response::ResponseCode;
+//! use obex_protocol::server::{Handler, Server};
 //!
 //! struct Notifications;
 //!

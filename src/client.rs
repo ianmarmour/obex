@@ -17,11 +17,11 @@
 //!
 //! A PBAP style phone book download over an already connected RFCOMM or L2CAP socket:
 //! ```no_run
-//! # fn example(socket: std::net::TcpStream) -> obex::Result<()> {
-//! use obex::client::Client;
-//! use obex::header::Header;
-//! use obex::target::PHONE_BOOK_ACCESS;
-//! use obex::tlv::ApplicationParameters;
+//! # fn example(socket: std::net::TcpStream) -> obex_protocol::Result<()> {
+//! use obex_protocol::client::Client;
+//! use obex_protocol::header::Header;
+//! use obex_protocol::target::PHONE_BOOK_ACCESS;
+//! use obex_protocol::tlv::ApplicationParameters;
 //!
 //! let mut client = Client::new(socket).with_single_response_mode(true);
 //! client.connect([Header::Target(PHONE_BOOK_ACCESS.to_vec())])?;

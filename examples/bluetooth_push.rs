@@ -73,8 +73,8 @@ mod rfcomm {
 
 #[cfg(target_os = "linux")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use obex::client::Client;
-    use obex::header::Header;
+    use obex_protocol::client::Client;
+    use obex_protocol::header::Header;
     use std::path::Path;
 
     let args: Vec<String> = std::env::args().collect();

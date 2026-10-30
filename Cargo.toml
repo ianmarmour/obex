@@ -1,6 +1,8 @@
 [package]
-name = "obex"
-version = "0.0.1"
+# `obex` is taken on crates.io. Profile crates built on this one are named
+# `obex-protocol-<profile>`, e.g. obex-protocol-map.
+name = "obex-protocol"
+version = "0.1.0"
 authors = ["Ian Armour <ianmarmour@gmail.com>"]
 description = """
 Native OBEX 1.5 (IrDA Object Exchange) implementation in Rust, usable over Bluetooth RFCOMM/L2CAP, IrDA or TCP.
@@ -12,12 +14,14 @@ repository = "https://github.com/ianmarmour/obex"
 license = "MIT"
 keywords = ["obex", "bluetooth", "irda", "goep"]
 categories = ["encoding", "network-programming"]
+# The specifications are copyrighted by their publishers, so they stay out of the package.
+exclude = ["docs/", ".devcontainer/", ".github/"]
 
 [lib]
 path = "src/lib.rs"
 
 [features]
-# Async client, server and packet stream for tokio, in `obex::tokio`.
+# Async client, server and packet stream for tokio, in `obex_protocol::tokio`.
 tokio = ["dep:tokio"]
 
 [dependencies]

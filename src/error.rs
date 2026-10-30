@@ -55,9 +55,9 @@ impl Error {
     ///
     /// # Examples
     /// ```
-    /// # use obex::Error;
-    /// # use obex::packet::Response;
-    /// # use obex::response::ResponseCode;
+    /// # use obex_protocol::Error;
+    /// # use obex_protocol::packet::Response;
+    /// # use obex_protocol::response::ResponseCode;
     /// let error = Error::Response(Box::new(Response::new(ResponseCode::NotFound)));
     ///
     /// assert_eq!(Some(ResponseCode::NotFound), error.response_code());
