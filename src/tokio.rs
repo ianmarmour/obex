@@ -6,7 +6,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! obex = { version = "0.0.1", features = ["tokio"] }
+//! obex-protocol = { version = "0.1", features = ["tokio"] }
 //! ```
 //!
 //! They run the same protocol engine as the blocking types in [`crate::client`],

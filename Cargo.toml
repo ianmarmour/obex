@@ -1,6 +1,7 @@
 [package]
-name = "obex"
-version = "0.0.1"
+# `obex` is taken on crates.io; the library is still imported as `obex`.
+name = "obex-protocol"
+version = "0.1.0"
 authors = ["Ian Armour <ianmarmour@gmail.com>"]
 description = """
 Native OBEX 1.5 (IrDA Object Exchange) implementation in Rust, usable over Bluetooth RFCOMM/L2CAP, IrDA or TCP.
@@ -12,8 +13,11 @@ repository = "https://github.com/ianmarmour/obex"
 license = "MIT"
 keywords = ["obex", "bluetooth", "irda", "goep"]
 categories = ["encoding", "network-programming"]
+# The specifications are copyrighted by their publishers, so they stay out of the package.
+exclude = ["docs/", ".devcontainer/", ".github/"]
 
 [lib]
+name = "obex"
 path = "src/lib.rs"
 
 [features]

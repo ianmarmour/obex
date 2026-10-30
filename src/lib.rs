@@ -47,7 +47,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! obex = { version = "0.0.1", features = ["tokio"] }
+//! obex-protocol = { version = "0.1", features = ["tokio"] }
 //! ```
 //!
 //! ## Transports

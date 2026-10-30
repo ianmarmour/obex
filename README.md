@@ -36,6 +36,13 @@ Both engines handle packet size negotiation, multi-packet requests and responses
 
 ## How Do I Use This Library
 
+The crate is published as `obex-protocol` (the `obex` name was taken) and imported as `obex`:
+
+```toml
+[dependencies]
+obex-protocol = "0.1"
+```
+
 Open a socket with your Bluetooth stack (BlueZ, `bluer`, or the platform APIs; find the RFCOMM channel or L2CAP PSM through SDP) and hand it to a `Client` or `Server`. Anything implementing `std::io::Read + std::io::Write` works.
 
 ### Client
@@ -99,7 +106,7 @@ Enable the `tokio` feature:
 
 ```toml
 [dependencies]
-obex = { version = "0.0.1", features = ["tokio"] }
+obex-protocol = { version = "0.1", features = ["tokio"] }
 ```
 
 The API mirrors the blocking one, with `.await` and `async fn` handlers. It works with any `AsyncRead + AsyncWrite` transport, such as `bluer`'s RFCOMM and L2CAP streams. Client, server and handler futures are `Send`, so they can be spawned on a multi-threaded runtime.
