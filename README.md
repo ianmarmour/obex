@@ -1,6 +1,6 @@
-# obex
+# obex-protocol
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![CI](https://github.com/ianmarmour/obex/workflows/CI/badge.svg)](https://github.com/ianmarmour/obex/actions/workflows/ci.yml)
+[![CI](https://github.com/ianmarmour/obex-protocol/workflows/CI/badge.svg)](https://github.com/ianmarmour/obex-protocol/actions/workflows/ci.yml)
 
 A native IrDA Object Exchange (OBEX 1.5) protocol library for Rust, with minimal dependencies.
 
@@ -134,7 +134,7 @@ let object = client.get([Header::Name("inbox".to_string())]).await?;
 
 ## Building a Profile on Top
 
-Profile crates built on this one form a family named `obex-protocol-<profile>`. For example, [`obex-protocol-map`](https://github.com/ianmarmour/map) implements the Bluetooth Message Access Profile and is imported as `obex_protocol_map`.
+Profile crates built on this one form a family named `obex-protocol-<profile>`. For example, [`obex-protocol-map`](https://github.com/ianmarmour/obex-protocol-map) implements the Bluetooth Message Access Profile and is imported as `obex_protocol_map`.
 
 Profiles choose a Target, then send Names, Types and Application Parameters. A Message Access Profile client, for example, is mostly constants:
 
