@@ -1,4 +1,4 @@
-# obex
+# obex-protocol
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![CI](https://github.com/ianmarmour/obex/workflows/CI/badge.svg)](https://github.com/ianmarmour/obex/actions/workflows/ci.yml)
 
