@@ -2,7 +2,7 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![CI](https://github.com/ianmarmour/obex-protocol/workflows/CI/badge.svg)](https://github.com/ianmarmour/obex-protocol/actions/workflows/ci.yml)
 
-A native IrDA Object Exchange (OBEX 1.5) protocol library for Rust, with minimal dependencies.
+A native IrDA Object Exchange (OBEX 1.5) protocol library for Rust, with minimal dependencies. It runs on desktops and servers with blocking or tokio I/O, and on embedded devices without `std`.
 
 ## What is OBEX
 
@@ -20,9 +20,10 @@ This library is a building block. It implements OBEX itself, complete and transp
 +-----------------------------------------------------------+
 |  client / server                 (blocking)               |  protocol engines
 |  tokio::{Client, Server}         (async, `tokio` feature) |
-|  header  packet  auth  srm  ...                           |  codec (no I/O)
+|  embedded::{Client, Server}      (async, no_std)          |
+|  header  packet  auth  srm  ...                           |  codec (no I/O, no_std)
 +-----------------------------------------------------------+
-|  RFCOMM (GOEP 1.x)   L2CAP ERTM (GOEP 2.x)   TCP :650     |  any Read + Write
+|  RFCOMM (GOEP 1.x)   L2CAP ERTM (GOEP 2.x)   TCP :650     |  any byte stream
 +-----------------------------------------------------------+
 ```
 
@@ -30,7 +31,10 @@ This library is a building block. It implements OBEX itself, complete and transp
 * **Client**: CONNECT, DISCONNECT, PUT (streaming), GET (streaming), SETPATH, ACTION (copy, move, permissions), SESSION and ABORT.
 * **Server**: a `Handler` trait receives complete operations; the server does the packet work. You need this for the profile roles where your device is the one being connected to, such as the MAP Message Notification Server.
 * **Transport framing** for both stream sockets (RFCOMM, TCP) and sequenced packet sockets (L2CAP `SOCK_SEQPACKET`).
-* **Async** (optional `tokio` feature): `obex_protocol::tokio` has async versions of the client, server, handler and packet stream. The blocking and async APIs run the same protocol engine, so they behave identically and can talk to each other.
+* **Async** (optional `tokio` feature): `obex_protocol::tokio` has async versions of the client, server, handler and packet stream.
+* **Embedded** (optional `embedded-io-async` feature, works without `std`): `obex_protocol::embedded` has the same client, server, handler and packet stream for `embedded-io-async` transports.
+
+The blocking, tokio and embedded APIs run the same protocol engine, so they behave identically and can talk to each other.
 
 Both engines handle packet size negotiation, multi-packet requests and responses, directed connections (Target, Who and Connection Id), Single Response Mode, digest authentication and ABORT.
 
@@ -40,7 +44,7 @@ The crate is published as `obex-protocol` (the `obex` name was taken) and import
 
 ```toml
 [dependencies]
-obex-protocol = "0.1"
+obex-protocol = "0.2"
 ```
 
 Open a socket with your Bluetooth stack (BlueZ, `bluer`, or the platform APIs; find the RFCOMM channel or L2CAP PSM through SDP) and hand it to a `Client` or `Server`. Anything implementing `std::io::Read + std::io::Write` works.
@@ -106,7 +110,7 @@ Enable the `tokio` feature:
 
 ```toml
 [dependencies]
-obex-protocol = { version = "0.1", features = ["tokio"] }
+obex-protocol = { version = "0.2", features = ["tokio"] }
 ```
 
 The API mirrors the blocking one, with `.await` and `async fn` handlers. It works with any `AsyncRead + AsyncWrite` transport, such as `bluer`'s RFCOMM and L2CAP streams. Client, server and handler futures are `Send`, so they can be spawned on a multi-threaded runtime.
@@ -131,6 +135,39 @@ let mut client = Client::new(client_socket).with_single_response_mode(true);
 client.connect([]).await?;
 let object = client.get([Header::Name("inbox".to_string())]).await?;
 ```
+
+### Embedded and `no_std`
+
+The default `std` feature provides the blocking API and the `std::io` integrations. Turn it off and the crate is `no_std`, needing only `alloc`. The codec is always available, and the `embedded-io-async` feature adds an async client and server for any transport implementing the [`embedded-io-async`](https://crates.io/crates/embedded-io-async) `Read` and `Write` traits, such as the Bluetooth channels of Embassy based firmware:
+
+```toml
+[dependencies]
+obex-protocol = { version = "0.2", default-features = false, features = ["embedded-io-async"] }
+```
+
+The API mirrors the tokio one, with two differences:
+
+* Handlers and their futures need not be `Send`, so they can own peripherals and run on single threaded executors.
+* Objects returned from a handler's `get` are held in memory as a `Vec<u8>`. `Client::get_into` and `Client::put_from` still stream.
+
+Without `std` there is no source of randomness, so the authentication methods take a nonce generator. Back it with the hardware random number generator:
+
+```rust
+use obex_protocol::embedded::{Authentication, Client, Handler, Server};
+use obex_protocol::header::Header;
+use obex_protocol::target::FOLDER_BROWSING;
+
+let mut client = Client::new(channel).with_max_packet_length(1024);
+client.connect([Header::Target(FOLDER_BROWSING.to_vec())]).await?;
+let listing = client.get([Header::Type("x-obex/folder-listing".into())]).await?;
+
+let mut server = Server::new(channel, Inbox)
+    .with_max_object_size(16 * 1024)
+    .with_authentication(Authentication::default(), move || rng.random_nonce());
+server.run().await?;
+```
+
+Memory use follows the packet size. Each packet is assembled in memory, so `with_max_packet_length` caps the buffers and should be lowered on small devices (the minimum is 255 bytes). PUT bodies a server receives are collected up to `with_max_object_size`. The bare-metal build is checked in CI against `thumbv7em-none-eabihf`.
 
 ## Building a Profile on Top
 
@@ -200,4 +237,4 @@ The specification is in [`docs/OBEX15.pdf`](docs/OBEX15.pdf).
 
 ## Minimum Supported Rust Version
 
-Rust 1.85, checked in CI.
+Rust 1.85, checked in CI with and without `std`.

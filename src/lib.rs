@@ -47,7 +47,20 @@
 //!
 //! ```toml
 //! [dependencies]
-//! obex-protocol = { version = "0.1", features = ["tokio"] }
+//! obex-protocol = { version = "0.2", features = ["tokio"] }
+//! ```
+//!
+//! ### Embedded and `no_std`
+//!
+//! The default `std` feature provides the blocking API. Without it the crate is
+//! `no_std` and needs only `alloc`: the codec is always available, and the
+//! `embedded-io-async` feature adds `obex_protocol::embedded`, an async client and
+//! server for transports implementing the `embedded-io-async` traits, such as those
+//! of Embassy based firmware.
+//!
+//! ```toml
+//! [dependencies]
+//! obex-protocol = { version = "0.2", default-features = false, features = ["embedded-io-async"] }
 //! ```
 //!
 //! ## Transports
@@ -63,6 +76,7 @@
 //!
 //! Pushing a vCard to a phone's inbox (OPP):
 //! ```no_run
+//! # #[cfg(feature = "std")]
 //! # fn example(socket: std::net::TcpStream) -> obex_protocol::Result<()> {
 //! use obex_protocol::client::Client;
 //! use obex_protocol::header::Header;
@@ -85,16 +99,23 @@
 //! # }
 //! ```
 //!
+#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
+
+extern crate alloc;
 
 pub mod action;
 pub mod auth;
+#[cfg(feature = "std")]
 pub mod client;
+#[cfg(feature = "embedded-io-async")]
+pub mod embedded;
 pub mod error;
 pub mod header;
 pub mod opcode;
 pub mod packet;
 pub mod response;
+#[cfg(feature = "std")]
 pub mod server;
 pub mod session;
 pub mod srm;
@@ -102,9 +123,23 @@ pub mod target;
 pub mod tlv;
 #[cfg(feature = "tokio")]
 pub mod tokio;
+#[cfg(feature = "std")]
 pub mod transport;
 
+#[cfg(any(feature = "std", feature = "embedded-io-async"))]
 mod engine;
 mod md5;
 
 pub use crate::error::{Error, Result};
+
+/// The `alloc` types the standard prelude would otherwise provide, so modules
+/// compile the same with and without `std`.
+#[allow(unused_imports)]
+mod prelude {
+    pub(crate) use alloc::borrow::ToOwned;
+    pub(crate) use alloc::boxed::Box;
+    pub(crate) use alloc::format;
+    pub(crate) use alloc::string::{String, ToString};
+    pub(crate) use alloc::vec;
+    pub(crate) use alloc::vec::Vec;
+}

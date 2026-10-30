@@ -50,7 +50,7 @@
 use std::future::{ready, Future};
 use std::io::{self, Read, Write};
 
-use crate::auth::{Credentials, DigestChallenge, Realm};
+use crate::auth::{Credentials, DigestChallenge};
 use crate::engine::io::{block_on, Blocking};
 use crate::engine::server::{EngineHandler, ServerEngine};
 use crate::error::Result;
@@ -245,16 +245,7 @@ impl<H: Handler + ?Sized> Handler for &mut H {
     }
 }
 
-/// Requirements for clients connecting to a [`Server`] that requires authentication.
-#[derive(Debug, PartialEq, Eq, Clone, Default)]
-pub struct Authentication {
-    /// Displayed to the user to tell them which password to use.
-    pub realm: Option<Realm>,
-    /// Clients must send a User Id, passed to [`Handler::password`].
-    pub user_id_required: bool,
-    /// Advertise that the access offered is read only.
-    pub read_only: bool,
-}
+pub use crate::auth::Authentication;
 
 /// The `Server` type. See [the module level documentation](index.html) for more.
 pub struct Server<T, H> {

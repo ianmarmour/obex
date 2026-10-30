@@ -5,12 +5,12 @@
 //! larger than the remote device can receive, with each header wholly inside one
 //! packet (OBEX section 3).
 
-use std::collections::VecDeque;
-use std::io;
+use alloc::collections::VecDeque;
 
 use super::io::Source;
 use crate::error::{Error, Result};
 use crate::header::Header;
+use crate::prelude::*;
 
 /// A body reader with lookahead, so the last chunk can be sent as End-of-Body.
 pub(crate) struct BodySource<R> {
@@ -29,7 +29,7 @@ impl<R: Source> BodySource<R> {
     }
 
     /// Takes up to `capacity` bytes, returning `true` alongside the last chunk.
-    async fn take(&mut self, capacity: usize) -> io::Result<(Vec<u8>, bool)> {
+    async fn take(&mut self, capacity: usize) -> Result<(Vec<u8>, bool)> {
         // Read one byte beyond the capacity to learn whether this chunk is the last.
         while !self.eof && self.pending.len() <= capacity {
             let start = self.pending.len();
@@ -41,9 +41,6 @@ impl<R: Source> BodySource<R> {
                     self.eof = true;
                 }
                 Ok(read) => self.pending.truncate(start + read),
-                Err(error) if error.kind() == io::ErrorKind::Interrupted => {
-                    self.pending.truncate(start)
-                }
                 Err(error) => {
                     self.pending.truncate(start);
                     return Err(error);
@@ -52,12 +49,12 @@ impl<R: Source> BodySource<R> {
         }
 
         if self.pending.len() <= capacity {
-            return Ok((std::mem::take(&mut self.pending), true));
+            return Ok((core::mem::take(&mut self.pending), true));
         }
 
         let rest = self.pending.split_off(capacity);
 
-        Ok((std::mem::replace(&mut self.pending, rest), false))
+        Ok((core::mem::replace(&mut self.pending, rest), false))
     }
 
     /// Puts bytes back in front of the unread body.
@@ -170,11 +167,9 @@ pub(crate) fn must_lead(header: &Header) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::io::{block_on, Blocking};
+    use crate::engine::io::{block_on, Bytes};
 
-    type Bytes<'a> = Blocking<&'a [u8]>;
-
-    fn drain(outgoing: &mut Outgoing<Bytes<'_>>, max_packet: usize) -> Vec<Vec<Header>> {
+    fn drain(outgoing: &mut Outgoing<Bytes>, max_packet: usize) -> Vec<Vec<Header>> {
         let mut packets = Vec::new();
 
         loop {
@@ -191,7 +186,7 @@ mod tests {
         let body = [7u8; 600];
         let mut outgoing = Outgoing::new(
             vec![Header::Name("a".to_string())],
-            Some(Blocking(&body[..])),
+            Some(Bytes::new(body.to_vec())),
         );
         let packets = drain(&mut outgoing, 255);
 
@@ -216,7 +211,7 @@ mod tests {
 
     #[test]
     fn empty_body_sends_empty_end_of_body() {
-        let mut outgoing = Outgoing::new(Vec::new(), Some(Blocking(&[][..])));
+        let mut outgoing = Outgoing::new(Vec::new(), Some(Bytes::new(Vec::new())));
 
         assert_eq!(
             vec![vec![Header::EndOfBody(Vec::new())]],
@@ -244,7 +239,10 @@ mod tests {
     #[test]
     fn rewind_replays_the_same_packet() {
         let body = [1u8, 2, 3];
-        let mut outgoing = Outgoing::new(vec![Header::ConnectionID(1)], Some(Blocking(&body[..])));
+        let mut outgoing = Outgoing::new(
+            vec![Header::ConnectionID(1)],
+            Some(Bytes::new(body.to_vec())),
+        );
 
         let (first, last) = block_on(outgoing.next_packet(255, 3)).unwrap();
         outgoing.rewind(first.clone());

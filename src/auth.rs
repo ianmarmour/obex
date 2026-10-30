@@ -11,15 +11,39 @@
 //! exchanges automatically when given credentials; this module holds the building
 //! blocks for implementations that drive the protocol themselves.
 //!
+//! Fresh nonces need a source of randomness. With `std` they come from
+//! [`generate_nonce`]; without it, servers and clients that challenge their peer
+//! take a nonce generator, typically backed by a hardware random number generator.
+//!
+#[cfg(feature = "std")]
 use std::collections::hash_map::RandomState;
+#[cfg(feature = "std")]
 use std::hash::{BuildHasher, Hasher};
+#[cfg(feature = "std")]
 use std::sync::atomic::{AtomicU64, Ordering};
+#[cfg(feature = "std")]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::error::{Error, Result};
 use crate::header::Header;
 use crate::md5;
+use crate::prelude::*;
 use crate::tlv::TagLengthValue;
+
+/// Requirements for clients connecting to a server that requires authentication.
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
+pub struct Authentication {
+    /// Displayed to the user to tell them which password to use.
+    pub realm: Option<Realm>,
+    /// Clients must send a User Id, passed to the handler's `password` method.
+    pub user_id_required: bool,
+    /// Advertise that the access offered is read only.
+    pub read_only: bool,
+}
+
+/// Produces the 16 byte nonces of digest challenges; every call must return a new,
+/// unpredictable value.
+pub type NonceGenerator = alloc::boxed::Box<dyn FnMut() -> [u8; 16] + Send>;
 
 const CHALLENGE_NONCE_TAG: u8 = 0x00;
 const CHALLENGE_OPTIONS_TAG: u8 = 0x01;
@@ -85,6 +109,7 @@ pub struct DigestChallenge {
 
 impl DigestChallenge {
     /// Creates a challenge with a fresh random nonce.
+    #[cfg(feature = "std")]
     pub fn new() -> DigestChallenge {
         DigestChallenge::with_nonce(generate_nonce())
     }
@@ -166,7 +191,7 @@ impl DigestChallenge {
     /// # Examples
     /// ```
     /// # use obex_protocol::auth::{Credentials, DigestChallenge};
-    /// let challenge = DigestChallenge::new();
+    /// let challenge = DigestChallenge::with_nonce([0x5a; 16]);
     /// let response = challenge.respond(&Credentials::new("1234"));
     ///
     /// assert!(response.verify(&challenge, b"1234"));
@@ -194,6 +219,7 @@ impl DigestChallenge {
     }
 }
 
+#[cfg(feature = "std")]
 impl Default for DigestChallenge {
     fn default() -> DigestChallenge {
         DigestChallenge::new()
@@ -343,6 +369,7 @@ pub fn request_digest(nonce: &[u8], password: &[u8]) -> [u8; 16] {
 /// The nonce hashes the current time and a process wide counter, keyed by the
 /// randomly seeded hasher from the standard library, so it is unpredictable to the
 /// remote device without additional dependencies.
+#[cfg(feature = "std")]
 pub fn generate_nonce() -> [u8; 16] {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -370,6 +397,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "std")]
     fn nonces_are_unique() {
         assert_ne!(generate_nonce(), generate_nonce());
     }

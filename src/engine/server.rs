@@ -1,9 +1,9 @@
 //! The OBEX server protocol, shared by the blocking and async servers.
 
-use std::collections::HashSet;
-use std::future::Future;
+use alloc::collections::BTreeSet;
+use core::future::Future;
 
-use crate::auth::{Credentials, DigestChallenge, DigestResponse};
+use crate::auth::{Authentication, Credentials, DigestChallenge, DigestResponse, NonceGenerator};
 use crate::error::{Error, Result};
 use crate::header::{Header, HeaderID, Headers};
 use crate::opcode::Opcode;
@@ -11,11 +11,12 @@ use crate::packet::{
     ConnectParameters, Request, Response, MAXIMUM_PACKET_LENGTH, MINIMUM_PACKET_LENGTH,
     PACKET_PREFIX_LENGTH,
 };
+use crate::prelude::*;
 use crate::response::ResponseCode;
-use crate::server::Authentication;
 use crate::srm::SingleResponseMode;
 
 use super::body::Outgoing;
+use super::fresh_challenge;
 use super::io::{Framed, Sink, Source};
 
 /// The application logic as seen by the engine. The public blocking and async
@@ -33,7 +34,7 @@ pub(crate) trait EngineHandler {
     fn get(
         &mut self,
         request: &Request,
-    ) -> impl Future<Output = std::result::Result<(Headers, Option<Self::Body>), Response>>;
+    ) -> impl Future<Output = core::result::Result<(Headers, Option<Self::Body>), Response>>;
 
     fn set_path(&mut self, request: &Request) -> impl Future<Output = Response>;
 
@@ -60,11 +61,12 @@ pub(crate) struct ServerEngine<T, H> {
     remote_max_packet_length: u16,
     pub(crate) srm_supported: bool,
     srm_enabled: bool,
-    connections: HashSet<u32>,
+    connections: BTreeSet<u32>,
     next_connection_id: u32,
     pub(crate) authentication: Option<Authentication>,
     authenticated: bool,
     challenge: Option<DigestChallenge>,
+    pub(crate) nonce: Option<NonceGenerator>,
     pub(crate) max_object_size: usize,
 }
 
@@ -77,11 +79,12 @@ impl<T, H> ServerEngine<T, H> {
             remote_max_packet_length: MINIMUM_PACKET_LENGTH,
             srm_supported: false,
             srm_enabled: false,
-            connections: HashSet::new(),
+            connections: BTreeSet::new(),
             next_connection_id: 1,
             authentication: None,
             authenticated: false,
             challenge: None,
+            nonce: None,
             max_object_size: 64 * 1024 * 1024,
         }
     }
@@ -198,7 +201,7 @@ impl<T: Source + Sink, H: EngineHandler> ServerEngine<T, H> {
                     realm: authentication.realm,
                     user_id_required: authentication.user_id_required,
                     read_only: authentication.read_only,
-                    ..DigestChallenge::new()
+                    ..fresh_challenge(&mut self.nonce)
                 };
                 self.challenge = Some(challenge.clone());
                 self.authenticated = false;

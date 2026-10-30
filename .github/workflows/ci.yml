@@ -28,6 +28,25 @@ jobs:
     - name: Run tests (all features)
       run: cargo test --verbose --all-features
 
+  no-std:
+    name: no_std
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install stable toolchain
+      run: rustup update stable && rustup default stable && rustup component add clippy && rustup target add thumbv7em-none-eabihf
+    - name: Clippy (bare metal, codec only)
+      run: cargo clippy --no-default-features --target thumbv7em-none-eabihf -- -D warnings
+    - name: Clippy (bare metal, embedded-io-async)
+      run: cargo clippy --no-default-features --features embedded-io-async --target thumbv7em-none-eabihf -- -D warnings
+    - name: Clippy (host, without std)
+      run: cargo clippy --all-targets --no-default-features --features embedded-io-async -- -D warnings
+    - name: Run tests (without std)
+      run: cargo test --verbose --no-default-features
+    - name: Run tests (without std, embedded-io-async)
+      run: cargo test --verbose --no-default-features --features embedded-io-async
+
   msrv:
     name: Minimum supported Rust version
     runs-on: ubuntu-latest
@@ -35,6 +54,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install Rust 1.85
-      run: rustup toolchain install 1.85 --profile minimal
+      run: rustup toolchain install 1.85 --profile minimal --target thumbv7em-none-eabihf
     - name: Check
       run: cargo +1.85 check --all-targets --all-features
+    - name: Check (bare metal)
+      run: cargo +1.85 check --no-default-features --features embedded-io-async --target thumbv7em-none-eabihf

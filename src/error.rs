@@ -4,17 +4,25 @@
 //! `nom::IResult` like the rest of the codec layer, while everything that touches a
 //! transport or composes packets returns [`Result`].
 //!
-use std::fmt;
-use std::io;
+use core::fmt;
 
 use crate::packet::Response;
+use crate::prelude::*;
 use crate::response::ResponseCode;
 
 /// The `Error` type. See [the module level documentation](index.html) for more.
+///
+/// Which transport error variants exist depends on the enabled features, so the
+/// enum is non-exhaustive.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
-    /// The underlying transport returned an error.
-    Io(io::Error),
+    /// A `std::io` (or tokio) transport returned an error.
+    #[cfg(feature = "std")]
+    Io(std::io::Error),
+    /// An `embedded-io-async` transport returned an error.
+    #[cfg(feature = "embedded-io-async")]
+    Transport(embedded_io_async::ErrorKind),
     /// The transport was closed by the remote device on a packet boundary.
     Disconnected,
     /// Received bytes could not be parsed as an OBEX packet.
@@ -73,7 +81,10 @@ impl Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            #[cfg(feature = "std")]
             Error::Io(error) => write!(f, "transport error: {}", error),
+            #[cfg(feature = "embedded-io-async")]
+            Error::Transport(kind) => write!(f, "transport error: {:?}", kind),
             Error::Disconnected => write!(f, "transport disconnected"),
             Error::Malformed(kind) => write!(f, "malformed OBEX packet ({:?})", kind),
             Error::HeaderTooLarge {
@@ -104,17 +115,19 @@ impl fmt::Display for Error {
     }
 }
 
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for Error {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
+            #[cfg(feature = "std")]
             Error::Io(error) => Some(error),
             _ => None,
         }
     }
 }
 
-impl From<io::Error> for Error {
-    fn from(error: io::Error) -> Error {
+#[cfg(feature = "std")]
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Error {
         Error::Io(error)
     }
 }
@@ -129,7 +142,7 @@ impl<I> From<nom::Err<nom::error::Error<I>>> for Error {
 }
 
 /// A `Result` alias where the `Err` case is an OBEX [`Error`].
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, Error>;
 
 /// Builds a nom failure for values that are syntactically valid but semantically invalid.
 pub(crate) fn failure<T>(i: &[u8]) -> nom::IResult<&[u8], T> {

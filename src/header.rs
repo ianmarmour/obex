@@ -32,6 +32,7 @@ use nom::{
 
 use crate::action::{ActionID, Permissions};
 use crate::error::{failure, Error, Result};
+use crate::prelude::*;
 use crate::srm::{SingleResponseMode, SingleResponseModeParameter};
 use crate::tlv::{self, ApplicationParameters, TagLengthValue};
 
@@ -152,7 +153,7 @@ impl TryFrom<u8> for HeaderID {
     /// assert_eq!(Ok(HeaderID::Body), HeaderID::try_from(0x48));
     /// assert!(HeaderID::try_from(0x30).is_err()); // User defined
     /// ```
-    fn try_from(original: u8) -> std::result::Result<Self, Self::Error> {
+    fn try_from(original: u8) -> core::result::Result<Self, Self::Error> {
         match original {
             0xC0 => Ok(HeaderID::Count),
             0x01 => Ok(HeaderID::Name),
@@ -806,7 +807,7 @@ impl Headers {
     }
 
     /// Iterates over every header in order.
-    pub fn iter(&self) -> std::slice::Iter<'_, Header> {
+    pub fn iter(&self) -> core::slice::Iter<'_, Header> {
         self.0.iter()
     }
 
@@ -1036,7 +1037,7 @@ impl Extend<Header> for Headers {
 
 impl IntoIterator for Headers {
     type Item = Header;
-    type IntoIter = std::vec::IntoIter<Header>;
+    type IntoIter = alloc::vec::IntoIter<Header>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -1045,7 +1046,7 @@ impl IntoIterator for Headers {
 
 impl<'a> IntoIterator for &'a Headers {
     type Item = &'a Header;
-    type IntoIter = std::slice::Iter<'a, Header>;
+    type IntoIter = core::slice::Iter<'a, Header>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()

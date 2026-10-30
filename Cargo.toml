@@ -2,7 +2,7 @@
 # `obex` is taken on crates.io. Profile crates built on this one are named
 # `obex-protocol-<profile>`, e.g. obex-protocol-map.
 name = "obex-protocol"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Ian Armour <ianmarmour@gmail.com>"]
 description = """
 Native OBEX 1.5 (IrDA Object Exchange) implementation in Rust, usable over Bluetooth RFCOMM/L2CAP, IrDA or TCP.
@@ -13,7 +13,7 @@ readme = "README.md"
 repository = "https://github.com/ianmarmour/obex-protocol"
 license = "MIT"
 keywords = ["obex", "bluetooth", "irda", "goep"]
-categories = ["encoding", "network-programming"]
+categories = ["encoding", "network-programming", "no-std", "embedded"]
 # The specifications are copyrighted by their publishers, so they stay out of the package.
 exclude = ["docs/", ".devcontainer/", ".github/"]
 
@@ -21,16 +21,33 @@ exclude = ["docs/", ".devcontainer/", ".github/"]
 path = "src/lib.rs"
 
 [features]
+default = ["std"]
+# The blocking client, server and packet stream over `std::io`. Without it the
+# crate is `no_std` and needs only `alloc`.
+std = ["nom/std"]
 # Async client, server and packet stream for tokio, in `obex_protocol::tokio`.
-tokio = ["dep:tokio"]
+tokio = ["std", "dep:tokio"]
+# Async client and server over `embedded-io-async`, in `obex_protocol::embedded`,
+# for embedded devices; works without `std`.
+embedded-io-async = ["dep:embedded-io-async"]
 
 [dependencies]
-nom = "7.1.1"
+embedded-io-async = { version = "0.7", optional = true }
+nom = { version = "7.1.1", default-features = false, features = ["alloc"] }
 tokio = { version = "1", optional = true, default-features = false, features = ["io-util"] }
 
 [dev-dependencies]
+embedded-io-adapters = { version = "0.7", features = ["tokio-1"] }
 libc = "0.2"
 tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "time"] }
+
+[[example]]
+name = "bluetooth_push"
+required-features = ["std"]
+
+[[example]]
+name = "loopback"
+required-features = ["std"]
 
 [[example]]
 name = "tokio_loopback"

@@ -18,6 +18,7 @@ use nom::{
 };
 
 use crate::error::{Error, Result};
+use crate::prelude::*;
 
 /// The `TagLengthValue` type. See [the module level documentation](index.html) for more.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -229,7 +230,7 @@ impl ApplicationParameters {
     }
 
     /// Iterates over every triplet in order.
-    pub fn iter(&self) -> std::slice::Iter<'_, TagLengthValue> {
+    pub fn iter(&self) -> core::slice::Iter<'_, TagLengthValue> {
         self.0.iter()
     }
 
@@ -258,7 +259,7 @@ impl FromIterator<TagLengthValue> for ApplicationParameters {
 
 impl IntoIterator for ApplicationParameters {
     type Item = TagLengthValue;
-    type IntoIter = std::vec::IntoIter<TagLengthValue>;
+    type IntoIter = alloc::vec::IntoIter<TagLengthValue>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()

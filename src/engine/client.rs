@@ -1,7 +1,7 @@
 //! The OBEX client protocol, shared by the blocking and async clients.
 
 use crate::action::{ActionID, Permissions};
-use crate::auth::{Credentials, DigestChallenge, DigestResponse};
+use crate::auth::{Credentials, DigestChallenge, DigestResponse, NonceGenerator};
 use crate::error::{Error, Result};
 use crate::header::{Header, HeaderID, Headers};
 use crate::opcode::Opcode;
@@ -9,11 +9,13 @@ use crate::packet::{
     ConnectParameters, Request, Response, SetPathFlags, MAXIMUM_PACKET_LENGTH,
     MINIMUM_PACKET_LENGTH, PACKET_PREFIX_LENGTH,
 };
+use crate::prelude::*;
 use crate::response::ResponseCode;
 use crate::session::SessionParameters;
 use crate::srm::SingleResponseMode;
 
 use super::body::{must_lead, Outgoing};
+use super::fresh_challenge;
 use super::io::{Discard, Framed, Sink, Source};
 
 pub(crate) type CredentialProvider = Box<dyn FnMut(&DigestChallenge) -> Option<Credentials> + Send>;
@@ -37,6 +39,7 @@ pub(crate) struct ClientEngine<T> {
     srm_wait: bool,
     pub(crate) credentials: Option<CredentialProvider>,
     pub(crate) server_password: Option<Vec<u8>>,
+    pub(crate) nonce: Option<NonceGenerator>,
 }
 
 impl<T> ClientEngine<T> {
@@ -51,6 +54,7 @@ impl<T> ClientEngine<T> {
             srm_wait: false,
             credentials: None,
             server_password: None,
+            nonce: None,
         }
     }
 
@@ -116,10 +120,10 @@ impl<T> ClientEngine<T> {
 
 impl<T: Source + Sink> ClientEngine<T> {
     pub(crate) async fn connect(&mut self, mut headers: Headers) -> Result<Response> {
-        let challenge = self
-            .server_password
-            .as_ref()
-            .map(|_| DigestChallenge::new());
+        let challenge = match self.server_password {
+            Some(_) => Some(fresh_challenge(&mut self.nonce)),
+            None => None,
+        };
         if let Some(challenge) = &challenge {
             headers.push(challenge.clone().into());
         }
@@ -181,7 +185,7 @@ impl<T: Source + Sink> ClientEngine<T> {
         insert_early(&mut headers, srm_header);
 
         let mut outgoing = Outgoing::new(headers, body);
-        let mut wait = std::mem::take(&mut self.srm_wait);
+        let mut wait = core::mem::take(&mut self.srm_wait);
         let mut first = true;
         let mut can_retry = self.credentials.is_some();
 
@@ -326,7 +330,7 @@ impl<T: Source + Sink> ClientEngine<T> {
 
             if let Err(error) = delivered {
                 let _ = self.abort_get(srm).await;
-                return Err(error.into());
+                return Err(error);
             }
 
             if !srm || additional {
@@ -538,11 +542,7 @@ fn insert_early(headers: &mut Headers, header: Option<Header>) {
 }
 
 /// Moves non-body headers into `collected` and writes body data to `sink`.
-async fn collect<W: Sink>(
-    headers: Headers,
-    collected: &mut Headers,
-    sink: &mut W,
-) -> std::io::Result<()> {
+async fn collect<W: Sink>(headers: Headers, collected: &mut Headers, sink: &mut W) -> Result<()> {
     for header in headers {
         match header {
             Header::Body(data) | Header::EndOfBody(data) => sink.write_all(&data).await?,

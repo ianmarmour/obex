@@ -49,14 +49,7 @@ use crate::header::{Header, Headers};
 use crate::packet::{Request, Response, SetPathFlags, MINIMUM_PACKET_LENGTH};
 use crate::session::SessionParameters;
 
-/// The result of a GET operation.
-#[derive(Debug, PartialEq, Clone, Default)]
-pub struct GetResponse {
-    /// Every non-body header of every response packet, in order.
-    pub headers: Headers,
-    /// The reassembled object body.
-    pub body: Vec<u8>,
-}
+pub use crate::packet::GetResponse;
 
 /// The `Client` type. See [the module level documentation](index.html) for more.
 pub struct Client<T> {

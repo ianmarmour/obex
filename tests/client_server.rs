@@ -1,4 +1,5 @@
 //! End to end tests running the `Client` against the `Server` over socket pairs.
+#![cfg(feature = "std")]
 
 use std::collections::HashMap;
 use std::io::{self, Read, Write};

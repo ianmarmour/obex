@@ -21,7 +21,17 @@ use nom::{
 use crate::error::{failure, Error, Result};
 use crate::header::{Header, Headers};
 use crate::opcode::Opcode;
+use crate::prelude::*;
 use crate::response::ResponseCode;
+
+/// The result of a GET operation.
+#[derive(Debug, PartialEq, Clone, Default)]
+pub struct GetResponse {
+    /// Every non-body header of every response packet, in order.
+    pub headers: Headers,
+    /// The reassembled object body.
+    pub body: Vec<u8>,
+}
 
 /// The OBEX protocol version sent in CONNECT packets (1.0).
 pub const OBEX_VERSION: u8 = 0x10;
